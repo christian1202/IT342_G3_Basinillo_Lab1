@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef } from "react";
+import { InputHTMLAttributes, ReactNode, forwardRef } from "react";
 import { LucideIcon } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -11,13 +11,15 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   /** Optional Lucide icon rendered inside the input on the left */
   icon?: LucideIcon;
+  /** Optional element rendered inside the input on the right (e.g. password toggle) */
+  rightElement?: ReactNode;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon: Icon, className = "", id, ...rest }, ref) => {
+  ({ label, error, icon: Icon, rightElement, className = "", id, ...rest }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
 
     return (
@@ -45,6 +47,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               transition-colors duration-200
               focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
               ${Icon ? "pl-10" : ""}
+              ${rightElement ? "pr-10" : ""}
               ${error
                 ? "border-red-400 focus:ring-red-500"
                 : "border-slate-200 dark:border-slate-700"
@@ -53,6 +56,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             `}
             {...rest}
           />
+          {rightElement && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {rightElement}
+            </div>
+          )}
         </div>
 
         {error && (

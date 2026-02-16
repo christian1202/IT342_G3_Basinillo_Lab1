@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, useCallback, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, LogIn, UserPlus, Chrome } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  LogIn,
+  UserPlus,
+  Chrome,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  RefreshCw,
+} from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { syncUserWithBackend } from "@/lib/api";
@@ -20,7 +30,7 @@ type Tab = "login" | "register";
 export default function LoginPage() {
   const router = useRouter();
 
-  /* ---- state ---- */
+  /* ---- core state ---- */
   const [activeTab, setActiveTab] = useState<Tab>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,26 +40,54 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  /* ---- new UX state ---- */
+  const [isConfirmationPending, setIsConfirmationPending] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  /* ---- resend cooldown timer ---- */
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
   /* ---- helpers ---- */
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
     setError(null);
     setFieldErrors({});
-  };
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  }, []);
 
-  const switchTab = (tab: Tab) => {
-    resetForm();
-    setActiveTab(tab);
-  };
+  const switchTab = useCallback(
+    (tab: Tab) => {
+      resetForm();
+      setActiveTab(tab);
+    },
+    [resetForm]
+  );
 
   /* ---- validate ---- */
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
 
-    if (!email.trim()) errs.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    const cleanEmail = email.trim();
+    if (!cleanEmail) errs.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail))
       errs.email = "Enter a valid email";
 
     if (!password) errs.password = "Password is required";
@@ -57,7 +95,8 @@ export default function LoginPage() {
       errs.password = "Must be at least 6 characters";
 
     if (activeTab === "register") {
-      if (!confirmPassword) errs.confirmPassword = "Please confirm your password";
+      if (!confirmPassword)
+        errs.confirmPassword = "Please confirm your password";
       else if (password !== confirmPassword)
         errs.confirmPassword = "Passwords do not match";
     }
@@ -74,20 +113,32 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
 
+    /* ✅ Sanitize input */
+    const cleanEmail = email.trim();
+    const cleanPassword = password; // never trim passwords
+
     try {
       const { data, error: authError } =
         activeTab === "login"
-          ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({ email, password });
+          ? await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password: cleanPassword,
+            })
+          : await supabase.auth.signUp({
+              email: cleanEmail,
+              password: cleanPassword,
+            });
 
       if (authError) throw authError;
 
       if (data.session) {
+        /* Login succeeded (or signup auto-confirmed) */
         await syncUserWithBackend(data.session);
         router.push("/dashboard");
-      } else if (activeTab === "register") {
-        setError("Check your email to confirm your account, then log in.");
-        switchTab("login");
+      } else if (activeTab === "register" && data.user && !data.session) {
+        /* ✅ Signup succeeded but email confirmation is required */
+        setConfirmationEmail(cleanEmail);
+        setIsConfirmationPending(true);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed");
@@ -113,8 +164,116 @@ export default function LoginPage() {
     }
   };
 
+  const handleResendEmail = async () => {
+    if (resendCooldown > 0) return;
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: confirmationEmail,
+      });
+      if (resendError) throw resendError;
+      setResendCooldown(60);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to resend email"
+      );
+    }
+  };
+
+  /* ---- password toggle button helper ---- */
+  const passwordToggle = (visible: boolean, toggle: () => void) => (
+    <button
+      type="button"
+      onClick={toggle}
+      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+      tabIndex={-1}
+      aria-label={visible ? "Hide password" : "Show password"}
+    >
+      {visible ? (
+        <EyeOff className="h-4 w-4" />
+      ) : (
+        <Eye className="h-4 w-4" />
+      )}
+    </button>
+  );
+
   /* ================================================================== */
-  /*  RENDER                                                             */
+  /*  RENDER — "Check Your Inbox" card                                   */
+  /* ================================================================== */
+  if (isConfirmationPending) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-violet-50 dark:from-slate-950 dark:via-indigo-950/30 dark:to-violet-950/20 px-4 py-12">
+        {/* decorative blobs */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl" />
+          <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-violet-400/20 blur-3xl" />
+        </div>
+
+        <div className="relative w-full max-w-md">
+          <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-8 shadow-xl shadow-slate-200/40 backdrop-blur-lg dark:border-slate-700/60 dark:bg-slate-900/80 dark:shadow-slate-900/40 text-center">
+            {/* mail icon */}
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 shadow-lg shadow-indigo-500/30">
+              <Mail className="h-8 w-8 text-white" />
+            </div>
+
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Check your inbox
+            </h2>
+
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              We sent a confirmation link to{" "}
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {confirmationEmail}
+              </span>
+              . Click the link to activate your account.
+            </p>
+
+            {/* error (e.g. resend failure) */}
+            {error && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
+                {error}
+              </div>
+            )}
+
+            {/* resend button */}
+            <button
+              onClick={handleResendEmail}
+              disabled={resendCooldown > 0}
+              className={`mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                resendCooldown > 0
+                  ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                  : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-950/80"
+              }`}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${resendCooldown > 0 ? "" : "group-hover:rotate-180 transition-transform"}`}
+              />
+              {resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : "Resend Confirmation Email"}
+            </button>
+
+            {/* back to login */}
+            <button
+              onClick={() => {
+                setIsConfirmationPending(false);
+                setError(null);
+                switchTab("login");
+              }}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  /* ================================================================== */
+  /*  RENDER — Login / Register form                                     */
   /* ================================================================== */
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-violet-50 dark:from-slate-950 dark:via-indigo-950/30 dark:to-violet-950/20 px-4 py-12">
@@ -177,27 +336,47 @@ export default function LoginPage() {
               autoComplete="email"
             />
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              icon={Lock}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              error={fieldErrors.password}
-              autoComplete={activeTab === "login" ? "current-password" : "new-password"}
-            />
+            {/* password with visibility toggle */}
+            <div>
+              <Input
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                icon={Lock}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={fieldErrors.password}
+                autoComplete={
+                  activeTab === "login" ? "current-password" : "new-password"
+                }
+                rightElement={passwordToggle(showPassword, () =>
+                  setShowPassword((p) => !p)
+                )}
+              />
+              {/* live password feedback (register only) */}
+              {activeTab === "register" &&
+                password.length > 0 &&
+                password.length < 6 && (
+                  <p className="mt-1.5 text-xs font-medium text-amber-500 dark:text-amber-400">
+                    Password must be at least 6 characters
+                  </p>
+                )}
+            </div>
 
+            {/* confirm password with visibility toggle */}
             {activeTab === "register" && (
               <Input
                 label="Confirm password"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="••••••••"
                 icon={Lock}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 error={fieldErrors.confirmPassword}
                 autoComplete="new-password"
+                rightElement={passwordToggle(showConfirmPassword, () =>
+                  setShowConfirmPassword((p) => !p)
+                )}
               />
             )}
 

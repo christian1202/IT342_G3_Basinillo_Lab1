@@ -32,6 +32,8 @@ build/
 ### Secrets ###
 application-secret.properties
 .env
+secrets.properties
+start-backend.bat
 
 ### VS Code ###
 .vscode/
