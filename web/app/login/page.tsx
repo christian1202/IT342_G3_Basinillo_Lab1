@@ -78,7 +78,7 @@ export default function LoginPage() {
       resetForm();
       setActiveTab(tab);
     },
-    [resetForm]
+    [resetForm],
   );
 
   /* ---- validate ---- */
@@ -134,6 +134,7 @@ export default function LoginPage() {
       if (data.session) {
         /* Login succeeded (or signup auto-confirmed) */
         await syncUserWithBackend(data.session);
+        router.refresh(); // re-run proxy with fresh cookies
         router.push("/dashboard");
       } else if (activeTab === "register" && data.user && !data.session) {
         /* ✅ Signup succeeded but email confirmation is required */
@@ -175,9 +176,7 @@ export default function LoginPage() {
       if (resendError) throw resendError;
       setResendCooldown(60);
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to resend email"
-      );
+      setError(err instanceof Error ? err.message : "Failed to resend email");
     }
   };
 
@@ -190,11 +189,7 @@ export default function LoginPage() {
       tabIndex={-1}
       aria-label={visible ? "Hide password" : "Show password"}
     >
-      {visible ? (
-        <EyeOff className="h-4 w-4" />
-      ) : (
-        <Eye className="h-4 w-4" />
-      )}
+      {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
     </button>
   );
 
@@ -350,7 +345,7 @@ export default function LoginPage() {
                   activeTab === "login" ? "current-password" : "new-password"
                 }
                 rightElement={passwordToggle(showPassword, () =>
-                  setShowPassword((p) => !p)
+                  setShowPassword((p) => !p),
                 )}
               />
               {/* live password feedback (register only) */}
@@ -375,7 +370,7 @@ export default function LoginPage() {
                 error={fieldErrors.confirmPassword}
                 autoComplete="new-password"
                 rightElement={passwordToggle(showConfirmPassword, () =>
-                  setShowConfirmPassword((p) => !p)
+                  setShowConfirmPassword((p) => !p),
                 )}
               />
             )}

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 /* ================================================================== */
@@ -29,64 +29,118 @@ function matchesAny(pathname: string, routes: string[]): boolean {
 
 /* ================================================================== */
 /*  PROXY                                                              */
-/*  The "bouncer" — runs before every matched request.                 */
+/*  The "bouncer" — runs before every matched request (Next.js 16+).   */
 /*                                                                     */
-/*  Next.js 16+ replaces the `middleware` convention with `proxy`.     */
-/*  The function name MUST be `proxy` and exported as a named export.  */
-/*                                                                     */
-/*  1. Creates a lightweight Supabase client for session inspection.   */
-/*  2. Reads the auth token from the request cookies.                  */
-/*  3. Applies redirect rules based on session state + route type.     */
+/*  Uses @supabase/ssr's createServerClient which reads/writes auth    */
+/*  tokens via cookies on the NextRequest/NextResponse pair.           */
+/*  This is the ONLY reliable way to check sessions server-side.       */
 /* ================================================================== */
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   /*
-   * Create a Supabase client scoped to this request.
-   * We forward the cookies from the incoming request so
-   * getUser() can verify the session JWT.
+   * Start with a "pass-through" response that we'll modify.
+   * This response object is shared with the cookie handlers below
+   * so any session-refresh cookies get forwarded to the browser.
    */
-  const supabase = createClient(
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
+
+  /*
+   * Create a Supabase client that reads cookies from the request
+   * and writes refreshed cookies back onto the response.
+   */
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: {
-        headers: {
-          cookie: request.headers.get("cookie") ?? "",
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(
+          cookiesToSet: {
+            name: string;
+            value: string;
+            options?: Record<string, unknown>;
+          }[],
+        ) {
+          /*
+           * 1. Set on the request (for downstream server components)
+           * 2. Set on the response (to send back to the browser)
+           */
+          cookiesToSet.forEach(
+            ({ name, value }: { name: string; value: string }) => {
+              request.cookies.set(name, value);
+            },
+          );
+
+          response = NextResponse.next({
+            request: { headers: request.headers },
+          });
+
+          cookiesToSet.forEach(
+            ({
+              name,
+              value,
+              options,
+            }: {
+              name: string;
+              value: string;
+              options?: Record<string, unknown>;
+            }) => {
+              response.cookies.set(name, value, options);
+            },
+          );
         },
       },
     },
   );
 
   /*
-   * Refresh the session & verify the token in one call.
-   * getUser() validates the JWT against the Supabase Auth server
-   * rather than just decoding it locally.
+   * IMPORTANT: getUser() validates the JWT against the Supabase Auth
+   * server AND refreshes expired tokens. This call also triggers
+   * setAll() above if the token was refreshed, ensuring the new
+   * cookies are written to the response.
    */
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
-  const hasSession = !!user;
+  const hasSession = !!user && !error;
+
+  /* ---- Debug logging (remove once stable) ---- */
+  console.log(
+    `[proxy] path=${pathname} | hasSession=${hasSession} | user=${user?.email ?? "none"}`,
+  );
 
   /* ---- Rule 1: Protect private routes ---- */
   if (!hasSession && matchesAny(pathname, PROTECTED_ROUTES)) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirectTo", pathname);
+
+    console.log(`[proxy] → redirecting to /login (no session)`);
     return NextResponse.redirect(loginUrl, 302);
   }
 
   /* ---- Rule 2: Redirect authenticated users away from auth pages ---- */
   if (hasSession && matchesAny(pathname, AUTH_ROUTES)) {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    return NextResponse.redirect(dashboardUrl, 302);
+    const redirectTo =
+      request.nextUrl.searchParams.get("redirectTo") || "/dashboard";
+    const targetUrl = request.nextUrl.clone();
+    targetUrl.pathname = redirectTo;
+    targetUrl.searchParams.delete("redirectTo");
+
+    console.log(`[proxy] → redirecting to ${redirectTo} (already logged in)`);
+    return NextResponse.redirect(targetUrl, 302);
   }
 
-  /* ---- No redirect needed — pass through ---- */
-  return NextResponse.next();
+  /* ---- No redirect — return response with refreshed cookies ---- */
+  return response;
 }
 
 /* ================================================================== */
