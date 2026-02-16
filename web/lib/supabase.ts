@@ -1,10 +1,23 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+/* ================================================================== */
+/*  Browser Supabase Client                                            */
+/*  Uses @supabase/ssr so auth tokens are stored in COOKIES instead   */
+/*  of localStorage. This makes the session visible to the proxy.ts   */
+/*  (server-side middleware) and Server Components.                     */
+/*                                                                     */
+/*  Import this in all client components ("use client").               */
+/* ================================================================== */
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
 
 /**
- * Singleton Supabase browser client.
- * Reads from NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
+ * Convenience singleton for components that just need `supabase`.
+ * Still cookie-based via @supabase/ssr under the hood.
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient();
