@@ -30,6 +30,10 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         // Allow the sync endpoint without authentication
                         .requestMatchers("/api/users/sync").permitAll()
+                        // Allow the dashboard status endpoint without authentication
+                        .requestMatchers("/api/dashboard/**").permitAll()
+                        // Allow shipment endpoints (development access)
+                        .requestMatchers("/api/shipments/**").permitAll()
                         // All other endpoints require authentication
                         .anyRequest().authenticated());
 
