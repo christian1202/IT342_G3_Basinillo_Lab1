@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type {
   IShipment,
   ICreateShipmentPayload,
@@ -24,6 +24,7 @@ import {
 /*    • error                  — nullable error string                 */
 /*    • loadShipments()        — fetch list by user                    */
 /*    • loadShipment()         — fetch single by id                    */
+/*    • refetch()              — re-run last loadShipments call        */
 /*    • addShipment()          — create new                            */
 /*    • editShipment()         — update existing                       */
 /*    • removeShipment()       — delete                                */
@@ -36,15 +37,23 @@ export function useShipments() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Ref that remembers the last userId passed to loadShipments.
+   * Used by refetch() so we can re-run the query without the
+   * caller needing to pass the userId again.
+   */
+  const lastUserIdRef = useRef<string | null>(null);
+
   /* ----------------------- LIST ----------------------------------- */
 
   /**
    * Fetches all shipments belonging to the given user (newest first).
-   * Ideal for populating a dashboard table or list view.
+   * Also stores the userId so refetch() can repeat the call.
    *
    * @param userId - UUID of the shipment owner
    */
   const loadShipments = useCallback(async (userId: string) => {
+    lastUserIdRef.current = userId;
     setIsLoading(true);
     setError(null);
 
@@ -63,6 +72,18 @@ export function useShipments() {
       setIsLoading(false);
     }
   }, []);
+
+  /* ----------------------- REFETCH -------------------------------- */
+
+  /**
+   * Re-runs the last loadShipments call using the stored userId.
+   * Ideal for refreshing the list after a create, update, or delete
+   * without requiring the caller to track the userId.
+   */
+  const refetch = useCallback(async () => {
+    if (!lastUserIdRef.current) return;
+    await loadShipments(lastUserIdRef.current);
+  }, [loadShipments]);
 
   /* ----------------------- SINGLE --------------------------------- */
 
@@ -221,6 +242,7 @@ export function useShipments() {
     /* Actions */
     loadShipments,
     loadShipment,
+    refetch,
     addShipment,
     editShipment,
     removeShipment,

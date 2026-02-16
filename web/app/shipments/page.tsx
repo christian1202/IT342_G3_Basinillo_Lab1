@@ -10,17 +10,23 @@ import type { IShipment } from "@/types/database";
 
 import SkeletonLoader from "@/components/ui/SkeletonLoader";
 import ErrorMessage from "@/components/ui/ErrorMessage";
+import Modal from "@/components/ui/Modal";
 import ShipmentCard from "@/components/shipments/ShipmentCard";
+import ShipmentForm from "@/components/shipments/ShipmentForm";
 
 /* ================================================================== */
 /*  ShipmentDashboard                                                  */
 /*  Main page component that lists the current user's shipments.       */
 /*                                                                     */
 /*  State flow (early-return pattern):                                 */
-/*    1. if (isAuthLoading) → loading spinner                          */
+/*    1. if (isAuthLoading) → auth spinner                             */
 /*    2. if (isLoading)     → SkeletonLoader                          */
 /*    3. if (error)         → ErrorMessage with retry                  */
 /*    4. else               → ShipmentCard list                        */
+/*                                                                     */
+/*  Modal integration:                                                 */
+/*    • isModalOpen controls the Create Shipment form overlay.         */
+/*    • handleCreateSuccess closes the modal and calls refetch().      */
 /* ================================================================== */
 
 export default function ShipmentDashboard(): React.JSX.Element {
@@ -30,8 +36,12 @@ export default function ShipmentDashboard(): React.JSX.Element {
   const [userId, setUserId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
+  /* ---- modal state ---- */
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   /* ---- shipment hook ---- */
-  const { shipments, isLoading, error, loadShipments } = useShipments();
+  const { shipments, isLoading, error, loadShipments, refetch } =
+    useShipments();
 
   /* ---- resolve session on mount ---- */
   useEffect(() => {
@@ -58,22 +68,46 @@ export default function ShipmentDashboard(): React.JSX.Element {
     loadShipments(userId);
   }, [userId, loadShipments]);
 
-  /* ---- retry handler (memoized) ---- */
-  const handleRetry = useCallback(() => {
-    if (userId) loadShipments(userId);
-  }, [userId, loadShipments]);
+  /* ================================================================ */
+  /*  EVENT HANDLERS (memoized)                                        */
+  /* ================================================================ */
 
-  /* ---- sign out ---- */
+  /** Retry / refresh the shipment list. */
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  /** Sign out and redirect to login. */
   const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
     router.push("/login");
   }, [router]);
 
-  /* ---- card click (navigate to detail — placeholder) ---- */
+  /** Navigate to shipment detail (future). */
   const handleCardClick = useCallback((shipment: IShipment) => {
     // Future: router.push(`/shipments/${shipment.id}`);
     console.log("Navigate to shipment:", shipment.id);
   }, []);
+
+  /** Open the create-shipment modal. */
+  const handleOpenModal = useCallback(() => {
+    setIsModalOpen(true);
+  }, []);
+
+  /** Close the create-shipment modal. */
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+  }, []);
+
+  /**
+   * THE GLUE — called by ShipmentForm on successful creation.
+   * 1. Closes the modal.
+   * 2. Refetches the shipment list so the new entry appears immediately.
+   */
+  const handleCreateSuccess = useCallback(() => {
+    setIsModalOpen(false);
+    refetch();
+  }, [refetch]);
 
   /* ================================================================ */
   /*  EARLY RETURN — Auth Loading                                      */
@@ -98,7 +132,7 @@ export default function ShipmentDashboard(): React.JSX.Element {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-violet-50 dark:from-slate-950 dark:via-indigo-950/30 dark:to-violet-950/20 px-4 py-8 sm:px-6 lg:px-8">
-      {/* ---- Decorative Blobs (consistent with login/dashboard) ---- */}
+      {/* ---- Decorative Blobs ---- */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl" />
         <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-violet-400/20 blur-3xl" />
@@ -128,6 +162,17 @@ export default function ShipmentDashboard(): React.JSX.Element {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
+              {/* Create New Shipment */}
+              <button
+                type="button"
+                onClick={handleOpenModal}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500 active:from-indigo-700 active:to-violet-700"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New Shipment</span>
+              </button>
+
+              {/* Refresh */}
               <button
                 type="button"
                 onClick={handleRetry}
@@ -137,6 +182,7 @@ export default function ShipmentDashboard(): React.JSX.Element {
                 <RefreshCw className="h-4 w-4" />
               </button>
 
+              {/* Sign Out */}
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -178,6 +224,14 @@ export default function ShipmentDashboard(): React.JSX.Element {
                   Create your first shipment to start tracking cargo.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={handleOpenModal}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500"
+              >
+                <Plus className="h-4 w-4" />
+                Create First Shipment
+              </button>
             </div>
           )}
 
@@ -205,6 +259,23 @@ export default function ShipmentDashboard(): React.JSX.Element {
           Back to Dashboard
         </button>
       </div>
+
+      {/* ============================================================ */}
+      {/*  Create Shipment Modal                                         */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title="Create New Shipment"
+      >
+        {userId && (
+          <ShipmentForm
+            userId={userId}
+            onSuccess={handleCreateSuccess}
+            onCancel={handleCloseModal}
+          />
+        )}
+      </Modal>
     </main>
   );
 }
