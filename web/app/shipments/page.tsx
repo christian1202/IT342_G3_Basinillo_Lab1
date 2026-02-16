@@ -11,7 +11,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import SkeletonLoader from "@/components/ui/SkeletonLoader";
 import ErrorMessage from "@/components/ui/ErrorMessage";
 import Modal from "@/components/ui/Modal";
-import ShipmentCard from "@/components/shipments/ShipmentCard";
+import ShipmentList from "@/components/shipments/ShipmentList";
 import ShipmentForm from "@/components/shipments/ShipmentForm";
 
 /* ================================================================== */
@@ -155,15 +155,10 @@ export default function ShipmentDashboard(): React.JSX.Element {
 
             {/* List */}
             {!isLoading && !error && shipments.length > 0 && (
-              <div className="space-y-3">
-                {shipments.map((shipment) => (
-                  <ShipmentCard
-                    key={shipment.id}
-                    shipment={shipment}
-                    onClick={handleCardClick}
-                  />
-                ))}
-              </div>
+              <ShipmentList
+                shipments={shipments}
+                onCardClick={handleCardClick}
+              />
             )}
           </section>
         </div>

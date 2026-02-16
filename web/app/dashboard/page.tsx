@@ -1,21 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { RefreshCw, Activity } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, PackageOpen } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
-import { fetchDashboardStatus, DashboardStatusResponse } from "@/lib/api";
 import { useShipments } from "@/hooks/useShipments";
+import type { IShipment } from "@/types/database";
+
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
+import ShipmentList from "@/components/shipments/ShipmentList";
+import ShipmentForm from "@/components/shipments/ShipmentForm";
+import Modal from "@/components/ui/Modal";
+import ErrorMessage from "@/components/ui/ErrorMessage";
+import SkeletonLoader from "@/components/ui/SkeletonLoader";
 
 /* ================================================================== */
-/*  DashboardPage                                                      */
-/*  Home page: shipment metrics grid + backend connection status.      */
+/*  Dashboard Page                                                     */
+/*  The main hub that composes all child components.                   */
+/*                                                                     */
+/*  Data strategy (Single Source of Truth):                            */
+/*    useShipments() is called ONCE here. The resulting arrays are     */
+/*    passed down as props to <DashboardMetrics> and <ShipmentList>.   */
+/*                                                                     */
+/*  State flow:                                                        */
+/*    1. isLoading → skeleton cards + skeleton list                    */
+/*    2. error     → <ErrorMessage> with retry                        */
+/*    3. empty     → onboarding empty-state illustration               */
+/*    4. data      → metrics grid + recent shipments list              */
 /* ================================================================== */
+
+/** Number of cards shown on the dashboard preview. */
+const RECENT_SHIPMENTS_LIMIT = 5;
 
 export default function DashboardPage(): React.JSX.Element {
-  /* ---- resolve userId ---- */
+  const router = useRouter();
+
+  /* ---- resolve userId from session ---- */
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,49 +50,45 @@ export default function DashboardPage(): React.JSX.Element {
     resolveUser();
   }, []);
 
-  /* ---- shipment data (for metrics) ---- */
-  const {
-    shipments,
-    isLoading: isShipmentsLoading,
-    loadShipments,
-  } = useShipments();
+  /* ---- single data source ---- */
+  const { shipments, isLoading, error, loadShipments, refetch } =
+    useShipments();
 
   useEffect(() => {
     if (!userId) return;
     loadShipments(userId);
   }, [userId, loadShipments]);
 
-  /* ---- backend status ---- */
-  const [dashboardData, setDashboardData] =
-    useState<DashboardStatusResponse | null>(null);
-  const [isStatusLoading, setIsStatusLoading] = useState(true);
-  const [statusError, setStatusError] = useState<string | null>(null);
+  /* ---- modal state ---- */
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const loadDashboardStatus = async () => {
-    setIsStatusLoading(true);
-    setStatusError(null);
+  /* ---- derived booleans ---- */
+  const hasData = !isLoading && !error && shipments.length > 0;
+  const isEmpty = !isLoading && !error && shipments.length === 0;
 
-    try {
-      const data = await fetchDashboardStatus();
-      setDashboardData(data);
-    } catch (err: unknown) {
-      setStatusError(
-        err instanceof Error
-          ? err.message
-          : "Failed to connect to the backend.",
-      );
-    } finally {
-      setIsStatusLoading(false);
-    }
-  };
+  /* ================================================================ */
+  /*  EVENT HANDLERS                                                   */
+  /* ================================================================ */
 
-  useEffect(() => {
-    loadDashboardStatus();
-  }, []);
+  const handleRetry = useCallback(() => refetch(), [refetch]);
+  const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
+  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
 
-  const formattedTimestamp = dashboardData?.timestamp
-    ? new Date(dashboardData.timestamp).toLocaleString()
-    : "";
+  const handleCreateSuccess = useCallback(() => {
+    setIsModalOpen(false);
+    refetch();
+  }, [refetch]);
+
+  const handleCardClick = useCallback(
+    (shipment: IShipment) => {
+      router.push(`/shipments`);
+    },
+    [router],
+  );
+
+  const handleViewAll = useCallback(() => {
+    router.push("/shipments");
+  }, [router]);
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -79,89 +97,147 @@ export default function DashboardPage(): React.JSX.Element {
   return (
     <DashboardLayout>
       <div className="px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-5xl space-y-8">
           {/* ======================================================== */}
           {/*  Page Header                                               */}
           {/* ======================================================== */}
-          <header className="mb-8">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
-              Dashboard
-            </h1>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-              Overview of your shipment operations
-            </p>
+          <header className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+                Dashboard
+              </h1>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                Overview of your logistics
+              </p>
+            </div>
+
+            {/* "New Shipment" button — visible only when data exists */}
+            {hasData && (
+              <button
+                type="button"
+                onClick={handleOpenModal}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500 active:from-indigo-700 active:to-violet-700"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New Shipment</span>
+              </button>
+            )}
           </header>
 
           {/* ======================================================== */}
-          {/*  Metrics Grid                                               */}
+          {/*  Loading State                                              */}
           {/* ======================================================== */}
-          <section aria-label="Shipment metrics" className="mb-8">
-            <DashboardMetrics
-              shipments={shipments}
-              isLoading={isShipmentsLoading}
-            />
-          </section>
+          {isLoading && (
+            <>
+              {/* Metric skeletons */}
+              <DashboardMetrics shipments={[]} isLoading />
+
+              {/* List skeletons */}
+              <section className="rounded-2xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/80 sm:p-8">
+                <SkeletonLoader rows={4} />
+              </section>
+            </>
+          )}
 
           {/* ======================================================== */}
-          {/*  Backend Status Card                                        */}
+          {/*  Error State                                                */}
           {/* ======================================================== */}
-          <section aria-label="Backend status" className="max-w-lg">
-            <h2 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-              System Status
-            </h2>
+          {!isLoading && error && (
+            <ErrorMessage message={error} onRetry={handleRetry} />
+          )}
 
-            <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/80">
-              {/* Loading */}
-              {isStatusLoading && (
-                <div className="flex flex-col items-center gap-4 py-6">
-                  <RefreshCw className="h-7 w-7 animate-spin text-indigo-500" />
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    Connecting to backend…
+          {/* ======================================================== */}
+          {/*  Empty / Onboarding State                                   */}
+          {/* ======================================================== */}
+          {isEmpty && (
+            <section className="rounded-2xl border border-slate-200/60 bg-white/80 p-10 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/80 sm:p-14">
+              <div className="flex flex-col items-center gap-5 text-center">
+                {/* Large icon */}
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-950/40 dark:to-violet-950/40">
+                  <PackageOpen className="h-10 w-10 text-indigo-500 dark:text-indigo-400" />
+                </div>
+
+                {/* Copy */}
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    No shipments yet
+                  </h2>
+                  <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">
+                    Create your first shipment to see real-time metrics and
+                    tracking info on this dashboard.
                   </p>
                 </div>
-              )}
 
-              {/* Error */}
-              {!isStatusLoading && statusError && (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-center text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
-                    {statusError}
-                  </div>
+                {/* CTA */}
+                <button
+                  type="button"
+                  onClick={handleOpenModal}
+                  className="mt-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Your First Shipment
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* ======================================================== */}
+          {/*  Metrics Grid (only when data exists)                       */}
+          {/* ======================================================== */}
+          {hasData && (
+            <section aria-label="Shipment metrics">
+              <DashboardMetrics shipments={shipments} isLoading={false} />
+            </section>
+          )}
+
+          {/* ======================================================== */}
+          {/*  Recent Shipments (only when data exists)                   */}
+          {/* ======================================================== */}
+          {hasData && (
+            <section aria-label="Recent shipments">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Recent Shipments
+                </h2>
+                {shipments.length > RECENT_SHIPMENTS_LIMIT && (
                   <button
-                    onClick={loadDashboardStatus}
-                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-50 px-5 py-2.5 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-950/80"
+                    type="button"
+                    onClick={handleViewAll}
+                    className="text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
                   >
-                    <RefreshCw className="h-4 w-4" />
-                    Retry
+                    View all →
                   </button>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Success */}
-              {!isStatusLoading && !statusError && dashboardData && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Activity className="h-5 w-5 text-emerald-500" />
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {dashboardData.message}
-                      </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        {formattedTimestamp}
-                      </p>
-                    </div>
-                  </div>
-
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    {dashboardData.status}
-                  </span>
-                </div>
-              )}
-            </div>
-          </section>
+              <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/80 sm:p-6">
+                <ShipmentList
+                  shipments={shipments}
+                  onCardClick={handleCardClick}
+                  limit={RECENT_SHIPMENTS_LIMIT}
+                />
+              </div>
+            </section>
+          )}
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/*  Create Shipment Modal                                         */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title="Create New Shipment"
+      >
+        {userId && (
+          <ShipmentForm
+            userId={userId}
+            onSuccess={handleCreateSuccess}
+            onCancel={handleCloseModal}
+          />
+        )}
+      </Modal>
     </DashboardLayout>
   );
 }
