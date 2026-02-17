@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.example.portkeymobile.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.providers.builtin.otp.EmailOtp
 import kotlinx.coroutines.launch
 
 @Composable
@@ -23,7 +24,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    valcontext = LocalContext.current
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
