@@ -13,11 +13,11 @@
 </div>
 
 <div align="center">
-  <a href="https://your-demo-url.vercel.app">
+  <a href="https://it-342-g3-basinillo-lab1.vercel.app/">
     <img src="https://img.shields.io/badge/View_Demo-2EA44F?style=for-the-badge&logo=vercel&logoColor=white" alt="View Demo" />
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/yourusername/portkey/issues">
+  <a href="https://github.com/christian1202/IT342_G3_Basinillo_Lab1/issues">
     <img src="https://img.shields.io/badge/Report_Bug-CB2431?style=for-the-badge&logo=github&logoColor=white" alt="Report Bug" />
   </a>
 </div>
@@ -47,12 +47,11 @@ It replaces outdated legacy systems with a secure, responsive dashboard that emp
 | **Frontend** | **Next.js 14** (App Router) | React Framework for Production, utilizing Server Components.    |
 |              | **TypeScript**              | Strict static typing for robust, maintainable code.             |
 |              | **Tailwind CSS**            | Utility-first CSS framework for rapid UI development.           |
-|              | **Lucide React**            | Beautiful, consistent icon library.                             |
-| **Backend**  | **Supabase**                | Open Source Firebase alternative (PostgreSQL + Auth + Storage). |
-|              | **PostgreSQL**              | Powering the relational data model.                             |
-| **Tools**    | **React Hook Form**         | Performant, flexible forms with easy validation.                |
-|              | **Zod**                     | TypeScript-first schema validation for forms and API data.      |
-|              | **Vercel**                  | Zero-configuration deployment platform.                         |
+| **Backend**  | **Spring Boot** (Java)      | Robust backend API handling core business logic and validation. |
+|              | **Maven**                   | Dependency management and build automation.                     |
+| **Database** | **Supabase**                | Managed PostgreSQL database with built-in Auth and Realtime.    |
+|              | **PostgreSQL**              | Relational data model for Shipments and Users.                  |
+| **DevOps**   | **Vercel**                  | Zero-configuration deployment for the Frontend.                 |
 
 ### Database Schema (`public.shipments`)
 
@@ -70,7 +69,11 @@ It replaces outdated legacy systems with a secure, responsive dashboard that emp
 ### Folder Structure
 
 ```ascii
-/web
+├── backend/
+│   └── basinillo/        # Spring Boot Application (Java)
+│       ├── src/main/java
+│       └── pom.xml
+├── web/
 ├── app/                  # Next.js App Router
 │   ├── dashboard/        # Protected Dashboard route
 │   ├── login/            # Authentication pages
