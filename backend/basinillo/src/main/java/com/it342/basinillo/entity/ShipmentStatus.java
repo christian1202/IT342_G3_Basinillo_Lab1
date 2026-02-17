@@ -27,5 +27,11 @@ public enum ShipmentStatus {
     RELEASED,
 
     /** Cargo has been delivered to the consignee. */
-    DELIVERED
+    DELIVERED,
+
+    /** Shipment is delayed due to unforeseen circumstances. */
+    DELAYED,
+
+    /** Shipment has been cancelled by the user or admin. */
+    CANCELLED
 }
