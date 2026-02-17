@@ -48,6 +48,9 @@
 - [x] **Client Setup**: Implementation `SupabaseClient` singleton.
 - [x] **UI Logic**: Built `ShipmentListScreen` with async data fetching.
 - [x] **Security**: Secured API credentials using `local.properties` and `BuildConfig`.
+- [x] **Authentication UI**: Built Login and Register screens with Supabase Auth integration.
+- [x] **Build Configuration**: Upgraded to Java 17 and fixed dependency version mismatches.
+- [x] **Documentation**: Updated README with mobile app details and tech stack.
 
 ## 🔮 Phase 6: Future Improvements (ROADMAP)
 
