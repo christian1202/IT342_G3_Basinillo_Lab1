@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.example.portkeymobile.SupabaseClient
 import com.example.portkeymobile.ui.ShipmentListScreen
-import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
 @Composable

@@ -8,7 +8,7 @@ import com.example.portkeymobile.SupabaseClient
 import com.example.portkeymobile.ui.auth.LoginScreen
 import com.example.portkeymobile.ui.auth.RegisterScreen
 import com.example.portkeymobile.ui.dashboard.DashboardScreen
-import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.gotrue.auth
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
