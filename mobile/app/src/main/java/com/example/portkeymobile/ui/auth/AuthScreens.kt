@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.example.portkeymobile.SupabaseClient
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
-import io.github.jan.supabase.gotrue.providers.builtin.otp.EmailOtp
+
 import kotlinx.coroutines.launch
 
 @Composable
