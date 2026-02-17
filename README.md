@@ -44,7 +44,7 @@ It replaces outdated legacy systems with a secure, responsive dashboard that emp
 
 | Domain          | Technology          | Details                                                            |
 | :-------------- | :------------------ | :----------------------------------------------------------------- |
-| **Frontend**    | **Next.js 14**      | App Router, Server Components, Server Actions (future-proof)       |
+| **Frontend**    | **Next.js 16**      | App Router, Server Components, Server Actions (future-proof)       |
 |                 | **TypeScript**      | Strict type safety for both UI and API interactions                |
 |                 | **Tailwind CSS**    | Utility-first styling with responsive design & dark mode readiness |
 |                 | **Lucide React**    | Consistent, lightweight SVG iconography                            |
