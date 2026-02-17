@@ -75,6 +75,8 @@ export interface IShipment {
   destination_port?: string | null;
   origin_city?: string | null;
   origin_port?: string | null;
+  service_fee: number; /* Brokerage revenue */
+  client_name?: string | null;
 }
 
 /**
@@ -87,6 +89,8 @@ export interface ICreateShipmentPayload {
   vessel_name?: string;
   container_number?: string;
   arrival_date?: string;
+  service_fee?: number;
+  client_name?: string;
 }
 
 /**
@@ -98,6 +102,8 @@ export interface IUpdateShipmentPayload {
   container_number?: string;
   arrival_date?: string;
   status?: ShipmentStatus;
+  service_fee?: number;
+  client_name?: string;
 }
 
 /* ------------------------------------------------------------------ */
