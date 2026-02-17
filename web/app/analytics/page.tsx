@@ -97,15 +97,7 @@ export default function AnalyticsPage() {
     const counts: Record<string, number> = {};
     shipments.forEach((s) => {
       if (s.destination_city || s.destination_port) {
-        // Fallback or prioritize specific field. Assuming 'destination' might be missing in Interface but requested in prompt.
-        // Let's check available fields. Interface IShipment usually has origin/destination or similar.
-        // If not, we might need to rely on 'port' or 'city' fields if they exist, or just 'destination' if the interface was updated.
-        // Based on previous context, fields were missing. I will try to use 'destination' strictly if user added it,
-        // OR fallback to a placeholder if the field doesn't strictly exist on the type to avoid build error.
-        // The prompt says: "columns: id, bl_number, origin, destination, status, created_at."
-        // So I will assume 'destination' exists on the fetched data, even if the TS type might be outdated.
-        // To be safe with TS, I'll cast s as any or assume interface has it.
-        const dest = (s as any).destination || "Unknown";
+        const dest = s.destination_city || s.destination_port || "Unknown";
         counts[dest] = (counts[dest] || 0) + 1;
       }
     });

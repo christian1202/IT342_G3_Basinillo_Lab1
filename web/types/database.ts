@@ -70,6 +70,10 @@ export interface IShipment {
   arrival_date: string | null; /* ISO-8601 timestamp (ETA)       */
   status: ShipmentStatus;
   created_at: string; /* ISO-8601 timestamp             */
+  destination_city?: string | null;
+  destination_port?: string | null;
+  origin_city?: string | null;
+  origin_port?: string | null;
 }
 
 /**
