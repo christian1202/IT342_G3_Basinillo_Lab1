@@ -2,6 +2,9 @@ package com.example.portkeymobile
 
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.gotrue.Auth
+
+
 
 /**
  * Singleton object for Supabase Client configuration.
