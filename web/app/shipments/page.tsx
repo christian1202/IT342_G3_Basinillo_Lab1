@@ -40,11 +40,12 @@ export default function ShipmentDashboard(): React.JSX.Element {
     error,
     loadShipments,
     refetch,
-    removeShipment, // <--- Destructure delete
+    removeShipment,
   } = useShipments();
 
-  /* ---- modal state ---- */
+  /* ---- modal & edit state ---- */
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<IShipment | null>(null);
 
   /* ---- load shipments once userId is known ---- */
   useEffect(() => {
@@ -58,21 +59,30 @@ export default function ShipmentDashboard(): React.JSX.Element {
 
   const handleRetry = useCallback(() => refetch(), [refetch]);
 
-  const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
-  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
+  /** Opens modal in "Create" mode (clears editingItem) */
+  const handleOpenCreateModal = useCallback(() => {
+    setEditingItem(null);
+    setIsModalOpen(true);
+  }, []);
 
-  const handleCreateSuccess = useCallback(() => {
+  /** Opens modal in "Edit" mode (sets editingItem) */
+  const handleOpenEditModal = useCallback((shipment: IShipment) => {
+    setEditingItem(shipment);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
+    // slight delay to prevent UI flicker while modal fades out
+    setTimeout(() => setEditingItem(null), 300);
+  }, []);
+
+  const handleFormSuccess = useCallback(() => {
+    setIsModalOpen(false);
+    setEditingItem(null);
     refetch();
   }, [refetch]);
 
-  const handleCardClick = useCallback((shipment: IShipment) => {
-    console.log("Navigate to shipment:", shipment.id);
-  }, []);
-
-  /**
-   * Delete handler passed down to the list.
-   */
   const handleDelete = useCallback(
     async (shipment: IShipment) => {
       await removeShipment(shipment.id);
@@ -103,17 +113,17 @@ export default function ShipmentDashboard(): React.JSX.Element {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Create */}
+                {/* Create Button */}
                 <button
                   type="button"
-                  onClick={handleOpenModal}
+                  onClick={handleOpenCreateModal}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500 active:from-indigo-700 active:to-violet-700"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">New Shipment</span>
                 </button>
 
-                {/* Refresh */}
+                {/* Refresh Button */}
                 <button
                   type="button"
                   onClick={handleRetry}
@@ -157,7 +167,7 @@ export default function ShipmentDashboard(): React.JSX.Element {
                 </div>
                 <button
                   type="button"
-                  onClick={handleOpenModal}
+                  onClick={handleOpenCreateModal}
                   className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500"
                 >
                   <Plus className="h-4 w-4" />
@@ -167,11 +177,12 @@ export default function ShipmentDashboard(): React.JSX.Element {
             )}
 
             {/* List */}
+            {/* Clicking a card now triggers Edit Mode */}
             {!isLoading && !error && shipments.length > 0 && (
               <ShipmentList
                 shipments={shipments}
-                onCardClick={handleCardClick}
-                onDelete={handleDelete} // <--- Pass delete handler
+                onCardClick={handleOpenEditModal} // <--- Wire edit handler
+                onDelete={handleDelete}
               />
             )}
           </section>
@@ -179,17 +190,18 @@ export default function ShipmentDashboard(): React.JSX.Element {
       </div>
 
       {/* ============================================================ */}
-      {/*  Create Shipment Modal                                         */}
+      {/*  Create/Edit Shipment Modal                                   */}
       {/* ============================================================ */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title="Create New Shipment"
+        title={editingItem ? "Edit Shipment" : "Create New Shipment"}
       >
         {userId && (
           <ShipmentForm
             userId={userId}
-            onSuccess={handleCreateSuccess}
+            initialData={editingItem} // <--- Pass item to edit
+            onSuccess={handleFormSuccess}
             onCancel={handleCloseModal}
           />
         )}
