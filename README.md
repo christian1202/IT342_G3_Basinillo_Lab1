@@ -42,71 +42,103 @@ It replaces outdated legacy systems with a secure, responsive dashboard that emp
 
 ### Tech Stack
 
-| Domain       | Technology                  | Description                                                     |
-| :----------- | :-------------------------- | :-------------------------------------------------------------- |
-| **Frontend** | **Next.js 14** (App Router) | React Framework for Production, utilizing Server Components.    |
-|              | **TypeScript**              | Strict static typing for robust, maintainable code.             |
-|              | **Tailwind CSS**            | Utility-first CSS framework for rapid UI development.           |
-| **Backend**  | **Spring Boot** (Java)      | Robust backend API handling core business logic and validation. |
-|              | **Maven**                   | Dependency management and build automation.                     |
-| **Database** | **Supabase**                | Managed PostgreSQL database with built-in Auth and Realtime.    |
-|              | **PostgreSQL**              | Relational data model for Shipments and Users.                  |
-| **DevOps**   | **Vercel**                  | Zero-configuration deployment for the Frontend.                 |
+| Domain          | Technology          | Details                                                            |
+| :-------------- | :------------------ | :----------------------------------------------------------------- |
+| **Frontend**    | **Next.js 14**      | App Router, Server Components, Server Actions (future-proof)       |
+|                 | **TypeScript**      | Strict type safety for both UI and API interactions                |
+|                 | **Tailwind CSS**    | Utility-first styling with responsive design & dark mode readiness |
+|                 | **Lucide React**    | Consistent, lightweight SVG iconography                            |
+| **State/Forms** | **React Hook Form** | Performant usage of uncontrolled inputs                            |
+|                 | **Zod**             | Schema validation for forms and API responses                      |
+|                 | **Custom Hooks**    | Encapsulated logic for data fetching (`useShipments`)              |
+| **Backend**     | **Spring Boot 3**   | Java framework for building production-grade capabilities          |
+|                 | **Spring Data JPA** | Abstraction layer for database interactions                        |
+|                 | **Spring Web**      | RESTful web service creation                                       |
+|                 | **Maven**           | Dependency management and build lifecycle                          |
+| **Database**    | **Supabase**        | Managed Backend-as-a-Service (PostgreSQL + Auth)                   |
+|                 | **PostgreSQL**      | Relational database with Row Level Security (RLS) policies         |
+| **DevOps**      | **Vercel**          | Frontend deployment & CI/CD                                        |
 
-### Database Schema (`public.shipments`)
+### Database Schema
 
-| Column Name        | Type          | Description                                                                                   |
-| :----------------- | :------------ | :-------------------------------------------------------------------------------------------- |
-| `id`               | `UUID`        | Primary Key, default `gen_random_uuid()`                                                      |
-| `user_id`          | `UUID`        | Foreign Key to `auth.users`, ensures ownership                                                |
-| `bl_number`        | `TEXT`        | Unique Bill of Lading Number                                                                  |
-| `vessel_name`      | `TEXT`        | Name of the carrying vessel                                                                   |
-| `container_number` | `TEXT`        | ID of the shipping container                                                                  |
-| `arrival_date`     | `TIMESTAMPTZ` | Estimated Time of Arrival (ETA)                                                               |
-| `status`           | `ENUM`        | Lifecycle state (`PENDING`, `IN_TRANSIT`, `ARRIVED`, `CUSTOMS_HOLD`, `RELEASED`, `DELIVERED`) |
-| `created_at`       | `TIMESTAMPTZ` | Record creation timestamp                                                                     |
+#### 1. `shipments` Table
+
+Core entity tracking cargo movements.
+
+| Column             | Type          | Default              | Description                                                                 |
+| :----------------- | :------------ | :------------------- | :-------------------------------------------------------------------------- |
+| `id`               | `UUID`        | `gen_random_uuid()`  | Primary Key                                                                 |
+| `user_id`          | `UUID`        | (FK -> `auth.users`) | Owner of the shipment                                                       |
+| `bl_number`        | `TEXT`        |                      | **Unique** Bill of Lading Number                                            |
+| `vessel_name`      | `TEXT`        |                      | Name of the vessel                                                          |
+| `container_number` | `TEXT`        |                      | Container ID                                                                |
+| `arrival_date`     | `TIMESTAMPTZ` |                      | Estimated Time of Arrival                                                   |
+| `status`           | `ENUM`        | `'PENDING'`          | `PENDING`, `IN_TRANSIT`, `ARRIVED`, `CUSTOMS_HOLD`, `RELEASED`, `DELIVERED` |
+| `created_at`       | `TIMESTAMPTZ` | `now()`              | Timestamp of creation                                                       |
+
+#### 2. `shipment_documents` Table
+
+Stores metadata for files attached to shipments.
+
+| Column          | Type          | Default                | Description                                    |
+| :-------------- | :------------ | :--------------------- | :--------------------------------------------- |
+| `id`            | `UUID`        | `gen_random_uuid()`    | Primary Key                                    |
+| `shipment_id`   | `UUID`        | (FK -> `shipments.id`) | Links to parent shipment (`ON DELETE CASCADE`) |
+| `document_type` | `TEXT`        |                        | e.g., `INVOICE`, `PACKING_LIST`                |
+| `file_url`      | `TEXT`        |                        | Supabase Storage URL                           |
+| `uploaded_at`   | `TIMESTAMPTZ` | `now()`                | Upload timestamp                               |
 
 ### Folder Structure
 
 ```ascii
+.
 ├── backend/
-│   └── basinillo/        # Spring Boot Application (Java)
-│       ├── src/main/java
-│       └── pom.xml
-├── web/
-├── app/                  # Next.js App Router
-│   ├── dashboard/        # Protected Dashboard route
-│   ├── login/            # Authentication pages
-│   ├── shipments/        # CRUD Shipment views
-│   └── page.tsx          # Landing Page
-├── components/           # Reusable UI Components
-│   ├── dashboard/        # Dashboard-specific widgets
-│   ├── layout/           # Sidebar, Navbar, Application Shell
-│   ├── shipments/        # ShipmentCard, ShipmentList, ShipmentForm
-│   └── ui/               # Atoms: Button, Input, Modal, Skeleton
-├── lib/                  # Utilities & Configuration
-│   └── supabase.ts       # Supabase Client configuration
-├── services/             # Data Access Layer (API calls)
-├── types/                # TypeScript Interfaces & Zod Schemas
-└── middleware.ts         # Route protection middleware
+│   └── basinillo/                # Spring Boot Backend
+│       ├── src/main/java/.../basinillo
+│       │   ├── config/           # Security & App Config
+│       │   ├── controller/       # REST Controllers (Endpoints)
+│       │   ├── dto/              # Data Transfer Objects
+│       │   ├── entity/           # JPA Entities (DB Models)
+│       │   ├── repository/       # Data Access Interfaces
+│       │   └── service/          # Business Logic Layer
+│       └── pom.xml               # Maven Dependencies
+├── web/                          # Next.js Frontend
+│   ├── app/                      # App Router URLs
+│   │   ├── dashboard/            # Protected User Dashboard
+│   │   ├── login/                # Auth Pages
+│   │   └── shipments/            # Shipment Management Views
+│   ├── components/
+│   │   ├── dashboard/            # Metrics & Widgets
+│   │   ├── layout/               # Sidebar, Header, Shell
+│   │   ├── shipments/            # Card, List, Form Components
+│   │   └── ui/                   # Reusable UI Library
+│   ├── hooks/                    # Custom React Hooks (useShipments)
+│   ├── lib/                      # Supabase Client setup
+│   ├── services/                 # Frontend API Services
+│   ├── types/                    # Shared TypeScript Interfaces
+│   ├── middleware.ts             # Auth Protection Middleware
+│   └── proxy.ts                  # Server-Side Token Management
+└── README.md                     # Project Documentation
 ```
 
 ## 🚀 Getting Started
 
-Follow these instructions to get a copy of the project up and running on your local machine.
+Follow these instructions to get the project up and running on your local machine.
 
 ### Prerequisites
 
-- **Node.js** (v18.17.0 or wider)
-- **npm** or **pnpm**
+- **Node.js** (v18.17.0 or wider) & **npm/pnpm** (for Web App)
+- **Java JDK 17+** & **Maven** (for Backend API)
+- **Supabase Account** (for Database & Auth)
 
-### Installation
+### 1. Web App (Frontend)
 
-1. **Clone the repository**
+The frontend is a Next.js application located in the `web` directory.
+
+1. **Navigate to the web directory**
 
    ```bash
-   git clone https://github.com/yourusername/portkey.git
-   cd portkey/web
+   cd web
    ```
 
 2. **Install dependencies**
@@ -118,21 +150,53 @@ Follow these instructions to get a copy of the project up and running on your lo
    ```
 
 3. **Set up Environment Variables**
-   Create a `.env.local` file in the root of the `web` directory and add your Supabase credentials:
+   Create a `.env.local` file in the `web/` directory:
 
-   ```bash
-   # .env.local
+   ```env
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
 4. **Run the development server**
-
    ```bash
    npm run dev
    ```
+   Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
 
-   Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Backend Service (Spring Boot)
+
+The backend is a Spring Boot application located in `backend/basinillo`, utilizing Maven.
+
+1. **Navigate to the backend directory**
+
+   ```bash
+   cd backend/basinillo
+   ```
+
+2. **Configure Database Connection**
+   Ensure `src/main/resources/application.properties` has your Supabase connection string:
+
+   ```properties
+   spring.datasource.url=jdbc:postgresql://<SUPABASE_HOST>:6543/postgres
+   spring.datasource.username=<DB_USER>
+   spring.datasource.password=<DB_PASSWORD>
+   ```
+
+3. **Build and Run**
+   ```bash
+   mvn spring-boot:run
+   ```
+   The API will be available at `http://localhost:8080`.
+
+## 🔌 API Endpoints
+
+The Spring Boot backend exposes the following RESTful endpoints for shipment management:
+
+| Method | Endpoint              | Description                   | Payloads / Params                             |
+| :----- | :-------------------- | :---------------------------- | :-------------------------------------------- |
+| `POST` | `/api/shipments`      | Create a new shipment         | Body: `{ userId, blNumber, vesselName, ... }` |
+| `GET`  | `/api/shipments`      | List all shipments for a user | Query: `?userId=<UUID>`                       |
+| `GET`  | `/api/shipments/{id}` | Get a single shipment details | Path: `id` (UUID)                             |
 
 ## 🛣️ Roadmap / Future Improvements
 
