@@ -1,20 +1,22 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-// Initialize Supabase Client
+// 1. Load keys from .env.local
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Use the God Key
+
+// 2. Create client
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST() {
-  // 1. Get a list of real users from your database so we can assign shipments to them
+  // Get real users
   const { data: users, error: userError } = await supabase
     .from("profiles")
     .select("id");
 
   if (userError || !users || users.length === 0) {
     return NextResponse.json(
-      { error: "No users found in profiles table. Create a user first!" },
+      { error: "No users found. Create a user first!" },
       { status: 400 },
     );
   }
@@ -44,18 +46,15 @@ export async function POST() {
 
   const shipments = [];
 
-  // 2. Generate 30 Realistic Shipments
-  for (let i = 0; i < 30; i++) {
+  // Generate 40 Shipments
+  for (let i = 0; i < 40; i++) {
     const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
     const randomClient = clients[Math.floor(Math.random() * clients.length)];
     const randomLocation =
       locations[Math.floor(Math.random() * locations.length)];
-    const randomUser = users[Math.floor(Math.random() * users.length)]; // Pick a random real user
+    const randomUser = users[Math.floor(Math.random() * users.length)];
 
-    // Random price between 1,500 and 15,000
     const randomFee = (Math.random() * (15000 - 1500) + 1500).toFixed(2);
-
-    // Random date in the last 30 days
     const date = new Date();
     date.setDate(date.getDate() - Math.floor(Math.random() * 30));
 
@@ -66,12 +65,16 @@ export async function POST() {
       origin: "Cebu Port Authority",
       destination: randomLocation,
       tracking_number: `TRK-${Math.floor(100000 + Math.random() * 900000)}`,
+
+      // ✅ ADDED THIS LINE TO FIX THE ERROR
+      bl_number: `BL-${Math.floor(100000 + Math.random() * 900000)}`,
+
       created_at: date.toISOString(),
-      user_id: randomUser.id, // This assigns it to a real person!
+      user_id: randomUser.id,
     });
   }
 
-  // 3. Insert into Database
+  // Insert
   const { data, error } = await supabase
     .from("shipments")
     .insert(shipments)
