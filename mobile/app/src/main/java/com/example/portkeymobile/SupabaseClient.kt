@@ -13,5 +13,6 @@ object SupabaseClient {
         supabaseKey = BuildConfig.SUPABASE_KEY
     ) {
         install(Postgrest)
+        install(Auth)
     }
 }
