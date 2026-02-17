@@ -38,13 +38,24 @@ It replaces outdated legacy systems with a secure, responsive dashboard that emp
 - **📊 Real-time Metrics**: Dynamic dashboard widgets that calculate and display shipment statuses (In-Transit, Delivered, Pending) on the fly.
 - **🔎 Global Search & Filtering**: (Planned) Quickly locate any shipment by Bill of Lading, Container Number, or Status.
 
+## 📱 Mobile Application (New!)
+
+Portkey now includes a native Android application built with **Kotlin** and **Jetpack Compose**.
+
+### Key Features
+
+- **Native Performance:** Built with modern Android architecture (MVVM).
+- **Real-time Data:** Connects to the same Supabase backend as the web dashboard.
+- **Secure Auth:** Supports Email/Password login with persistent sessions.
+- **Live Tracking:** View shipment status, origin, and destination on the go.
+
 ## 🏗️ Technical Architecture
 
 ### Tech Stack
 
 | Domain          | Technology          | Details                                                            |
 | :-------------- | :------------------ | :----------------------------------------------------------------- |
-| **Frontend**    | **Next.js 14**      | App Router, Server Components, Server Actions (future-proof)       |
+| **Frontend**    | **Next.js 16**      | App Router, Server Components, Server Actions (future-proof)       |
 |                 | **TypeScript**      | Strict type safety for both UI and API interactions                |
 |                 | **Tailwind CSS**    | Utility-first styling with responsive design & dark mode readiness |
 |                 | **Lucide React**    | Consistent, lightweight SVG iconography                            |
@@ -58,6 +69,10 @@ It replaces outdated legacy systems with a secure, responsive dashboard that emp
 | **Database**    | **Supabase**        | Managed Backend-as-a-Service (PostgreSQL + Auth)                   |
 |                 | **PostgreSQL**      | Relational database with Row Level Security (RLS) policies         |
 | **DevOps**      | **Vercel**          | Frontend deployment & CI/CD                                        |
+| **Mobile**      | **Kotlin**          | Native Android development language                                |
+|                 | **Jetpack Compose** | Modern toolkit for building native UI                              |
+|                 | **Ktor Client**     | Asynchronous client for network requests                           |
+|                 | **Supabase KT**     | Official Kotlin client for Supabase Auth and Database interactions |
 
 ### Database Schema
 
