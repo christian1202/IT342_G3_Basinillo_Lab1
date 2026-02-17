@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, PackageOpen, Search, Moon, Sun } from "lucide-react";
+import { Plus, PackageOpen, Search } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { useShipments } from "@/hooks/useShipments";
 import type { IShipment } from "@/types/database";
-import { useTheme } from "@/context/ThemeContext";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
@@ -62,7 +61,6 @@ export default function DashboardPage(): React.JSX.Element {
   /* ---- features state: search ---- */
   const [searchQuery, setSearchQuery] = useState("");
   // Removed local darkMode state in favor of global theme
-  const { theme, toggleTheme } = useTheme(); // <--- Use Global Theme Hook
 
   /* ---- derived filtering logic ---- */
   const filteredShipments = useMemo(() => {
