@@ -2,7 +2,7 @@
 
 ## 🚀 Phase 1: Foundation & Setup (COMPLETED)
 
-- [x] **Initialize Project**: Create Next.js 16 (App Router) project with TypeScript.
+- [x] **Initialize Project**: Create Next.js 14 (App Router) project with TypeScript.
 - [x] **UI Framework**: Install and configure Tailwind CSS.
 - [x] **Database Setup**: Create Supabase project and configure PostgreSQL.
 - [x] **Environment Variables**: Setup `.env.local` with Supabase keys.
@@ -13,7 +13,7 @@
 - [x] **Login UI**: Create responsive Login page (`/login`).
 - [x] **Supabase Auth**: Implement `signInWithPassword` and session management.
 - [x] **Middleware Protection**:
-  - [x] Create `proxy.ts` (formerly `middleware.ts`) for Next.js 16+ compatibility.
+  - [x] Create `proxy.ts` (formerly `middleware.ts`) for Next.js 14+ compatibility.
   - [x] Protect `/dashboard` routes from unauthenticated access.
   - [x] Fix infinite redirect loops and session persistence.
 

@@ -51,10 +51,13 @@ public class ShipmentController {
      * @return 201 Created with the persisted Shipment, or 400 Bad Request on validation failure
      */
     @PostMapping
+    @SuppressWarnings("null")
     public ResponseEntity<?> createShipment(@RequestBody Map<String, String> payload) {
 
         try {
-            UUID userId             = UUID.fromString(payload.get("userId"));
+            String userIdStr = payload.get("userId");
+            if (userIdStr == null) throw new IllegalArgumentException("userId is required");
+            UUID userId = UUID.fromString(userIdStr);
             String blNumber         = payload.get("blNumber");
             String vesselName       = payload.get("vesselName");
             String containerNumber  = payload.get("containerNumber");
@@ -83,6 +86,7 @@ public class ShipmentController {
      * @return 200 OK with a list of Shipment entities
      */
     @GetMapping
+    @SuppressWarnings("null")
     public ResponseEntity<List<Shipment>> getShipmentsByUser(
             @RequestParam("userId") UUID userId) {
 
@@ -101,6 +105,7 @@ public class ShipmentController {
      * @return 200 OK with the Shipment, or 404 Not Found
      */
     @GetMapping("/{id}")
+    @SuppressWarnings("null")
     public ResponseEntity<?> getShipmentById(@PathVariable("id") UUID shipmentId) {
 
         try {
