@@ -40,7 +40,16 @@
 - [x] **Landing Page**: Create professional marketing Home page at `/`.
 - [x] **Documentation**: Write professional `README.md` with badges and screenshots.
 
-## 🔮 Phase 5: Future Improvements (ROADMAP)
+## 📱 Phase 5: Mobile App (Android) (COMPLETED)
+
+- [x] **Project Structure**: Set up Android Studio project with Kotlin DSL.
+- [x] **Dependencies**: Added Supabase, Ktor Client, and Kotlin Serialization support.
+- [x] **Data Layer**: Created `Shipment` data model with `@Serializable`.
+- [x] **Client Setup**: Implementation `SupabaseClient` singleton.
+- [x] **UI Logic**: Built `ShipmentListScreen` with async data fetching.
+- [x] **Security**: Secured API credentials using `local.properties` and `BuildConfig`.
+
+## 🔮 Phase 6: Future Improvements (ROADMAP)
 
 - [ ] **Search & Filter**: Add search bar to filter shipments by BL Number.
 - [ ] **Dark Mode**: Add theme toggle (Light/Dark).
