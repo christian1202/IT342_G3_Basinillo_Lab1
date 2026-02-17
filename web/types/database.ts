@@ -35,6 +35,7 @@ export interface IUserProfile {
   full_name: string;
   role: string; /* "admin" | "broker" | "client"        */
   avatar_url: string;
+  created_at?: string; /* ISO-8601 timestamp */
 }
 
 /* ------------------------------------------------------------------ */
