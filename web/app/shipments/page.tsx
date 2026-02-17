@@ -17,9 +17,6 @@ import ShipmentForm from "@/components/shipments/ShipmentForm";
 /* ================================================================== */
 /*  ShipmentDashboard                                                  */
 /*  Displays the current user's shipments inside the DashboardLayout.  */
-/*                                                                     */
-/*  Auth guard, sidebar, and logout are handled by DashboardLayout.    */
-/*  This page only manages shipment data + the create-shipment modal.  */
 /* ================================================================== */
 
 export default function ShipmentDashboard(): React.JSX.Element {
@@ -37,8 +34,14 @@ export default function ShipmentDashboard(): React.JSX.Element {
   }, []);
 
   /* ---- shipment hook ---- */
-  const { shipments, isLoading, error, loadShipments, refetch } =
-    useShipments();
+  const {
+    shipments,
+    isLoading,
+    error,
+    loadShipments,
+    refetch,
+    removeShipment, // <--- Destructure delete
+  } = useShipments();
 
   /* ---- modal state ---- */
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,6 +69,16 @@ export default function ShipmentDashboard(): React.JSX.Element {
   const handleCardClick = useCallback((shipment: IShipment) => {
     console.log("Navigate to shipment:", shipment.id);
   }, []);
+
+  /**
+   * Delete handler passed down to the list.
+   */
+  const handleDelete = useCallback(
+    async (shipment: IShipment) => {
+      await removeShipment(shipment.id);
+    },
+    [removeShipment],
+  );
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -158,6 +171,7 @@ export default function ShipmentDashboard(): React.JSX.Element {
               <ShipmentList
                 shipments={shipments}
                 onCardClick={handleCardClick}
+                onDelete={handleDelete} // <--- Pass delete handler
               />
             )}
           </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Ship, Calendar, Package, Tag } from "lucide-react";
+import { Ship, Calendar, Package, Tag, Trash2 } from "lucide-react";
 import type { IShipment } from "@/types/database";
 
 /* ================================================================== */
@@ -65,11 +65,14 @@ interface ShipmentCardProps {
   shipment: IShipment;
   /** Optional click handler for navigating to the detail view. */
   onClick?: (shipment: IShipment) => void;
+  /** Optional handler for deleting a shipment. */
+  onDelete?: (shipment: IShipment) => void;
 }
 
 export default function ShipmentCard({
   shipment,
   onClick,
+  onDelete,
 }: ShipmentCardProps): React.JSX.Element {
   const style = STATUS_STYLES[shipment.status] ?? DEFAULT_STYLE;
 
@@ -84,14 +87,8 @@ export default function ShipmentCard({
 
   return (
     <article
-      role="button"
-      tabIndex={0}
-      aria-label={`Shipment ${shipment.bl_number}`}
+      className="group relative cursor-pointer rounded-xl border border-slate-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-slate-700/60 dark:bg-slate-800/70 dark:hover:border-indigo-600"
       onClick={() => onClick?.(shipment)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onClick?.(shipment);
-      }}
-      className="group cursor-pointer rounded-xl border border-slate-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-indigo-300 dark:border-slate-700/60 dark:bg-slate-800/70 dark:hover:border-indigo-600"
     >
       {/* ---- Top Row: BL Number + Status Badge ---- */}
       <div className="flex items-start justify-between gap-3">
@@ -131,6 +128,24 @@ export default function ShipmentCard({
           <span>{formattedArrival}</span>
         </div>
       </div>
+
+      {/* ---- Delete Button (visible on hover) ---- */}
+      {onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation(); // prevent card click
+            if (
+              window.confirm("Are you sure you want to delete this shipment?")
+            ) {
+              onDelete(shipment);
+            }
+          }}
+          className="absolute -right-2 -top-2 rounded-full border border-slate-200 bg-white p-2 text-slate-400 opacity-0 shadow-sm transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 md:right-4 md:top-4 md:opacity-0 md:group-hover:opacity-100"
+          aria-label="Delete shipment"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      )}
     </article>
   );
 }

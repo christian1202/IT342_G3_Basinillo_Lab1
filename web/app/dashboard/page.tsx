@@ -19,16 +19,6 @@ import SkeletonLoader from "@/components/ui/SkeletonLoader";
 /* ================================================================== */
 /*  Dashboard Page                                                     */
 /*  The main hub that composes all child components.                   */
-/*                                                                     */
-/*  Data strategy (Single Source of Truth):                            */
-/*    useShipments() is called ONCE here. The resulting arrays are     */
-/*    passed down as props to <DashboardMetrics> and <ShipmentList>.   */
-/*                                                                     */
-/*  State flow:                                                        */
-/*    1. isLoading → skeleton cards + skeleton list                    */
-/*    2. error     → <ErrorMessage> with retry                        */
-/*    3. empty     → onboarding empty-state illustration               */
-/*    4. data      → metrics grid + recent shipments list              */
 /* ================================================================== */
 
 /** Number of cards shown on the dashboard preview. */
@@ -51,8 +41,14 @@ export default function DashboardPage(): React.JSX.Element {
   }, []);
 
   /* ---- single data source ---- */
-  const { shipments, isLoading, error, loadShipments, refetch } =
-    useShipments();
+  const {
+    shipments,
+    isLoading,
+    error,
+    loadShipments,
+    refetch,
+    removeShipment, // <--- Destructure delete action
+  } = useShipments();
 
   useEffect(() => {
     if (!userId) return;
@@ -81,9 +77,24 @@ export default function DashboardPage(): React.JSX.Element {
 
   const handleCardClick = useCallback(
     (shipment: IShipment) => {
-      router.push(`/shipments`);
+      router.push("/shipments");
     },
     [router],
+  );
+
+  /**
+   * Delete handler passed down to the list.
+   * Calls the hook's removeShipment function.
+   */
+  const handleDelete = useCallback(
+    async (shipment: IShipment) => {
+      const success = await removeShipment(shipment.id);
+      if (success) {
+        // Optimistic update is handled by the hook, but we can also refetch to be safe
+        // refetch();
+      }
+    },
+    [removeShipment],
   );
 
   const handleViewAll = useCallback(() => {
@@ -215,6 +226,7 @@ export default function DashboardPage(): React.JSX.Element {
                   shipments={shipments}
                   onCardClick={handleCardClick}
                   limit={RECENT_SHIPMENTS_LIMIT}
+                  onDelete={handleDelete} // <--- Pass delete handler
                 />
               </div>
             </section>
