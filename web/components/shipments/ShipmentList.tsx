@@ -6,9 +6,7 @@ import ShipmentCard from "@/components/shipments/ShipmentCard";
 /* ================================================================== */
 /*  ShipmentList                                                       */
 /*  Renders a vertical list of ShipmentCards.                          */
-/*                                                                     */
-/*  This is a pure presentational component — no data fetching,        */
-/*  no loading/error states. The parent is responsible for those.       */
+/*  Now supports deletion via the onDelete prop.                       */
 /* ================================================================== */
 
 interface ShipmentListProps {
@@ -16,6 +14,8 @@ interface ShipmentListProps {
   shipments: IShipment[];
   /** Optional click handler forwarded to each card. */
   onCardClick?: (shipment: IShipment) => void;
+  /** Optional handler for deleting a shipment. */
+  onDelete?: (shipment: IShipment) => void;
   /** Optional max number of items to show (e.g. 5 for a dashboard preview). */
   limit?: number;
 }
@@ -23,6 +23,7 @@ interface ShipmentListProps {
 export default function ShipmentList({
   shipments,
   onCardClick,
+  onDelete,
   limit,
 }: ShipmentListProps): React.JSX.Element {
   const visibleShipments = limit ? shipments.slice(0, limit) : shipments;
@@ -34,6 +35,7 @@ export default function ShipmentList({
           key={shipment.id}
           shipment={shipment}
           onClick={onCardClick}
+          onDelete={onDelete}
         />
       ))}
     </div>

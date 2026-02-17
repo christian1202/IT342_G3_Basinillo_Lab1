@@ -19,19 +19,8 @@ import SkeletonLoader from "@/components/ui/SkeletonLoader";
 /* ================================================================== */
 /*  Dashboard Page                                                     */
 /*  The main hub that composes all child components.                   */
-/*                                                                     */
-/*  Data strategy (Single Source of Truth):                            */
-/*    useShipments() is called ONCE here. The resulting arrays are     */
-/*    passed down as props to <DashboardMetrics> and <ShipmentList>.   */
-/*                                                                     */
-/*  State flow:                                                        */
-/*    1. isLoading → skeleton cards + skeleton list                    */
-/*    2. error     → <ErrorMessage> with retry                        */
-/*    3. empty     → onboarding empty-state illustration               */
-/*    4. data      → metrics grid + recent shipments list              */
 /* ================================================================== */
 
-/** Number of cards shown on the dashboard preview. */
 const RECENT_SHIPMENTS_LIMIT = 5;
 
 export default function DashboardPage(): React.JSX.Element {
@@ -51,16 +40,23 @@ export default function DashboardPage(): React.JSX.Element {
   }, []);
 
   /* ---- single data source ---- */
-  const { shipments, isLoading, error, loadShipments, refetch } =
-    useShipments();
+  const {
+    shipments,
+    isLoading,
+    error,
+    loadShipments,
+    refetch,
+    removeShipment,
+  } = useShipments();
 
   useEffect(() => {
     if (!userId) return;
     loadShipments(userId);
   }, [userId, loadShipments]);
 
-  /* ---- modal state ---- */
+  /* ---- modal & edit state ---- */
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<IShipment | null>(null);
 
   /* ---- derived booleans ---- */
   const hasData = !isLoading && !error && shipments.length > 0;
@@ -71,19 +67,38 @@ export default function DashboardPage(): React.JSX.Element {
   /* ================================================================ */
 
   const handleRetry = useCallback(() => refetch(), [refetch]);
-  const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
-  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
 
-  const handleCreateSuccess = useCallback(() => {
+  /** Opens Create Modal (clears edit state) */
+  const handleOpenCreateModal = useCallback(() => {
+    setEditingItem(null);
+    setIsModalOpen(true);
+  }, []);
+
+  /** Opens Edit Modal (sets edit state) */
+  const handleOpenEditModal = useCallback((shipment: IShipment) => {
+    setEditingItem(shipment);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
+    setTimeout(() => setEditingItem(null), 300);
+  }, []);
+
+  const handleFormSuccess = useCallback(() => {
+    setIsModalOpen(false);
+    setEditingItem(null);
     refetch();
   }, [refetch]);
 
-  const handleCardClick = useCallback(
-    (shipment: IShipment) => {
-      router.push(`/shipments`);
+  const handleDelete = useCallback(
+    async (shipment: IShipment) => {
+      const success = await removeShipment(shipment.id);
+      if (success) {
+        // refetch() // optional, hook handles opt-update
+      }
     },
-    [router],
+    [removeShipment],
   );
 
   const handleViewAll = useCallback(() => {
@@ -115,7 +130,7 @@ export default function DashboardPage(): React.JSX.Element {
             {hasData && (
               <button
                 type="button"
-                onClick={handleOpenModal}
+                onClick={handleOpenCreateModal} // <--- Wire create handler
                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500 active:from-indigo-700 active:to-violet-700"
               >
                 <Plus className="h-4 w-4" />
@@ -125,14 +140,11 @@ export default function DashboardPage(): React.JSX.Element {
           </header>
 
           {/* ======================================================== */}
-          {/*  Loading State                                              */}
+          {/*  Loading                                                   */}
           {/* ======================================================== */}
           {isLoading && (
             <>
-              {/* Metric skeletons */}
               <DashboardMetrics shipments={[]} isLoading />
-
-              {/* List skeletons */}
               <section className="rounded-2xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/80 sm:p-8">
                 <SkeletonLoader rows={4} />
               </section>
@@ -140,24 +152,21 @@ export default function DashboardPage(): React.JSX.Element {
           )}
 
           {/* ======================================================== */}
-          {/*  Error State                                                */}
+          {/*  Error                                                     */}
           {/* ======================================================== */}
           {!isLoading && error && (
             <ErrorMessage message={error} onRetry={handleRetry} />
           )}
 
           {/* ======================================================== */}
-          {/*  Empty / Onboarding State                                   */}
+          {/*  Empty                                                     */}
           {/* ======================================================== */}
           {isEmpty && (
             <section className="rounded-2xl border border-slate-200/60 bg-white/80 p-10 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/80 sm:p-14">
               <div className="flex flex-col items-center gap-5 text-center">
-                {/* Large icon */}
                 <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-950/40 dark:to-violet-950/40">
                   <PackageOpen className="h-10 w-10 text-indigo-500 dark:text-indigo-400" />
                 </div>
-
-                {/* Copy */}
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                     No shipments yet
@@ -167,11 +176,9 @@ export default function DashboardPage(): React.JSX.Element {
                     tracking info on this dashboard.
                   </p>
                 </div>
-
-                {/* CTA */}
                 <button
                   type="button"
-                  onClick={handleOpenModal}
+                  onClick={handleOpenCreateModal} // <--- Wire create handler
                   className="mt-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500"
                 >
                   <Plus className="h-4 w-4" />
@@ -182,7 +189,7 @@ export default function DashboardPage(): React.JSX.Element {
           )}
 
           {/* ======================================================== */}
-          {/*  Metrics Grid (only when data exists)                       */}
+          {/*  Metrics Grid                                              */}
           {/* ======================================================== */}
           {hasData && (
             <section aria-label="Shipment metrics">
@@ -191,7 +198,7 @@ export default function DashboardPage(): React.JSX.Element {
           )}
 
           {/* ======================================================== */}
-          {/*  Recent Shipments (only when data exists)                   */}
+          {/*  Recent Shipments                                          */}
           {/* ======================================================== */}
           {hasData && (
             <section aria-label="Recent shipments">
@@ -213,8 +220,9 @@ export default function DashboardPage(): React.JSX.Element {
               <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/80 sm:p-6">
                 <ShipmentList
                   shipments={shipments}
-                  onCardClick={handleCardClick}
+                  onCardClick={handleOpenEditModal} // <--- Edit on click
                   limit={RECENT_SHIPMENTS_LIMIT}
+                  onDelete={handleDelete}
                 />
               </div>
             </section>
@@ -223,17 +231,18 @@ export default function DashboardPage(): React.JSX.Element {
       </div>
 
       {/* ============================================================ */}
-      {/*  Create Shipment Modal                                         */}
+      {/*  Create/Edit Modal                                             */}
       {/* ============================================================ */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title="Create New Shipment"
+        title={editingItem ? "Edit Shipment" : "Create New Shipment"}
       >
         {userId && (
           <ShipmentForm
             userId={userId}
-            onSuccess={handleCreateSuccess}
+            initialData={editingItem} // <--- Pass editingItem
+            onSuccess={handleFormSuccess}
             onCancel={handleCloseModal}
           />
         )}

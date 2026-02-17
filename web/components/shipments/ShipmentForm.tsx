@@ -1,19 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Ship, Tag, Navigation, Package, Calendar } from "lucide-react";
 
-import { createShipment } from "@/services/shipmentService";
-import type { ShipmentStatus } from "@/types/database";
+import { createShipment, updateShipment } from "@/services/shipmentService";
+import type {
+  IShipment,
+  ShipmentStatus,
+  IUpdateShipmentPayload,
+} from "@/types/database";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 /* ================================================================== */
 /*  Zod Schema                                                         */
-/*  Defines validation rules that mirror database constraints.         */
-/*  Extracted OUTSIDE the component for DRY and reusability.           */
 /* ================================================================== */
 
 const shipmentSchema = z.object({
@@ -35,14 +38,23 @@ const shipmentSchema = z.object({
     .or(z.literal("")),
 
   arrival_date: z.string().optional().or(z.literal("")),
+
+  status: z
+    .enum([
+      "PENDING",
+      "IN_TRANSIT",
+      "ARRIVED",
+      "CUSTOMS_HOLD",
+      "RELEASED",
+      "DELIVERED",
+    ] as const)
+    .optional(),
 });
 
-/** Inferred TypeScript type from the Zod schema — single source of truth. */
 type ShipmentFormValues = z.infer<typeof shipmentSchema>;
 
 /* ================================================================== */
 /*  STATUS OPTIONS                                                     */
-/*  Extracted as a constant (DRY) for the status select dropdown.      */
 /* ================================================================== */
 
 const STATUS_OPTIONS: { value: ShipmentStatus; label: string }[] = [
@@ -55,8 +67,7 @@ const STATUS_OPTIONS: { value: ShipmentStatus; label: string }[] = [
 ];
 
 /* ================================================================== */
-/*  SelectGroup — Reusable Label + Select + Error sub-component        */
-/*  Eliminates repeated markup for select fields.                      */
+/*  SelectGroup Helper                                                 */
 /* ================================================================== */
 
 interface SelectGroupProps {
@@ -88,33 +99,34 @@ function SelectGroup({
 
 /* ================================================================== */
 /*  ShipmentForm                                                       */
-/*  Form component for creating a new shipment.                        */
-/*                                                                     */
-/*  Props:                                                             */
-/*    • userId    — UUID of the shipment owner (from auth session)     */
-/*    • onSuccess — callback fired after a successful submission        */
-/*    • onCancel  — optional callback to close a modal / navigate back */
+/*  Supports both Creating (default) and Editing (via initialData).    */
 /* ================================================================== */
 
 interface ShipmentFormProps {
-  /** UUID of the authenticated user creating this shipment. */
+  /** UUID of the shipment owner. */
   userId: string;
-  /** Callback invoked after successful creation (e.g., refresh list). */
+  /** Callback fired after successful create/update. */
   onSuccess: () => void;
-  /** Optional callback for cancel/close actions. */
+  /** Optional callback to close modal. */
   onCancel?: () => void;
+  /** If provided, switches form to "Edit Mode". */
+  initialData?: IShipment | null;
 }
 
 export default function ShipmentForm({
   userId,
   onSuccess,
   onCancel,
+  initialData,
 }: ShipmentFormProps): React.JSX.Element {
-  /* ---- React Hook Form wired to Zod schema ---- */
+  const isEditMode = !!initialData;
+
+  /* ---- RHF Setup ---- */
   const {
     register,
     handleSubmit,
     setError: setFormError,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentSchema),
@@ -123,19 +135,57 @@ export default function ShipmentForm({
       vessel_name: "",
       container_number: "",
       arrival_date: "",
+      status: "PENDING",
     },
   });
 
-  /* ---- Submit handler ---- */
+  /* ---- Pre-fill form when initialData changes ---- */
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        bl_number: initialData.bl_number,
+        vessel_name: initialData.vessel_name || "",
+        container_number: initialData.container_number || "",
+        arrival_date: initialData.arrival_date
+          ? new Date(initialData.arrival_date).toISOString().slice(0, 16) // format for datetime-local
+          : "",
+        status: initialData.status,
+      });
+    } else {
+      reset({
+        bl_number: "",
+        vessel_name: "",
+        container_number: "",
+        arrival_date: "",
+        status: "PENDING",
+      });
+    }
+  }, [initialData, reset]);
+
+  /* ---- Submit Handler ---- */
   const onSubmit = async (values: ShipmentFormValues) => {
     try {
-      const result = await createShipment({
-        user_id: userId,
-        bl_number: values.bl_number,
-        vessel_name: values.vessel_name || undefined,
-        container_number: values.container_number || undefined,
-        arrival_date: values.arrival_date || undefined,
-      });
+      let result;
+
+      if (isEditMode && initialData) {
+        /* UPDATE Logic */
+        const payload: IUpdateShipmentPayload = {
+          vessel_name: values.vessel_name || undefined,
+          container_number: values.container_number || undefined,
+          arrival_date: values.arrival_date || undefined,
+          status: values.status,
+        };
+        result = await updateShipment(initialData.id, payload);
+      } else {
+        /* CREATE Logic */
+        result = await createShipment({
+          user_id: userId,
+          bl_number: values.bl_number,
+          vessel_name: values.vessel_name || undefined,
+          container_number: values.container_number || undefined,
+          arrival_date: values.arrival_date || undefined,
+        });
+      }
 
       if (result.error) {
         setFormError("root", { message: result.error });
@@ -150,18 +200,13 @@ export default function ShipmentForm({
     }
   };
 
-  /* ================================================================ */
-  /*  RENDER                                                           */
-  /* ================================================================ */
-
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
       noValidate
       className="flex flex-col gap-5"
-      aria-label="Create shipment form"
+      aria-label={isEditMode ? "Edit shipment form" : "Create shipment form"}
     >
-      {/* ---- Root-level error (e.g., server/network errors) ---- */}
       {errors.root && (
         <div
           role="alert"
@@ -171,16 +216,17 @@ export default function ShipmentForm({
         </div>
       )}
 
-      {/* ---- Bill of Lading Number (required) ---- */}
+      {/* Bill of Lading */}
       <Input
         label="Bill of Lading Number *"
         placeholder="e.g. BL-2026-001"
         icon={Tag}
         error={errors.bl_number?.message}
         {...register("bl_number")}
+        disabled={isEditMode}
       />
 
-      {/* ---- Vessel Name ---- */}
+      {/* Vessel Name */}
       <Input
         label="Vessel Name"
         placeholder="e.g. MV Ever Given"
@@ -189,7 +235,7 @@ export default function ShipmentForm({
         {...register("vessel_name")}
       />
 
-      {/* ---- Container Number ---- */}
+      {/* Container Number */}
       <Input
         label="Container Number"
         placeholder="e.g. MSKU1234567"
@@ -198,7 +244,7 @@ export default function ShipmentForm({
         {...register("container_number")}
       />
 
-      {/* ---- Arrival Date (ETA) ---- */}
+      {/* Arrival Date */}
       <Input
         label="Estimated Arrival Date"
         type="datetime-local"
@@ -207,11 +253,30 @@ export default function ShipmentForm({
         {...register("arrival_date")}
       />
 
-      {/* ---- Action Buttons ---- */}
+      {/* Status (Only visible in Edit Mode) */}
+      {isEditMode && (
+        <SelectGroup label="Current Status" error={errors.status?.message}>
+          <div className="relative">
+            <select
+              {...register("status")}
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {/* Custom arrow could go here */}
+          </div>
+        </SelectGroup>
+      )}
+
+      {/* Action Buttons */}
       <div className="flex flex-col gap-3 pt-2 sm:flex-row-reverse">
         <Button type="submit" isLoading={isSubmitting}>
           <Navigation className="h-4 w-4" />
-          Create Shipment
+          {isEditMode ? "Save Changes" : "Create Shipment"}
         </Button>
 
         {onCancel && (
