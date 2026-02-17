@@ -8,7 +8,7 @@ import io.github.jan.supabase.postgrest.Postgrest
  * Contains the project URL and Anonymous API Key.
  */
 object SupabaseClient {
-    // TODO: Replace with your actual Supabase Project URL and Anon Key
+    // TODO: ⚠️ REPLACE WITH YOUR ACTUAL SUPABASE URL AND KEY FROM .env.local ⚠️
     private const val SUPABASE_URL = "YOUR_SUPABASE_URL"
     private const val SUPABASE_KEY = "YOUR_ANON_KEY"
 
