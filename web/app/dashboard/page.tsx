@@ -148,19 +148,6 @@ export default function DashboardPage(): React.JSX.Element {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                {/* Dark Mode Toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                  aria-label="Toggle Dark Mode"
-                >
-                  {theme === "dark" ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
-                </button>
-
                 {/* Search Bar */}
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
