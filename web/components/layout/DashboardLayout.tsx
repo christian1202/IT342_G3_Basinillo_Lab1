@@ -37,6 +37,7 @@ export default function DashboardLayout({
 
   /* ---- auth state ---- */
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   /* ---- mobile drawer state ---- */
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -51,6 +52,21 @@ export default function DashboardLayout({
       if (!session) {
         router.push("/login");
         return;
+      }
+
+      // Check role
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile?.role === "admin") {
+        setIsAdmin(true);
+        // Auto-redirect if on the main dashboard
+        if (window.location.pathname === "/dashboard") {
+          router.replace("/admin");
+        }
       }
 
       setIsAuthLoading(false);
@@ -93,7 +109,7 @@ export default function DashboardLayout({
       {/*  Desktop Sidebar (hidden on mobile)                           */}
       {/* ============================================================ */}
       <div className="hidden w-[250px] shrink-0 border-r border-slate-200 dark:border-slate-800 lg:block">
-        <Sidebar onLogout={handleLogout} />
+        <Sidebar onLogout={handleLogout} isAdmin={isAdmin} />
       </div>
 
       {/* ============================================================ */}
@@ -110,7 +126,12 @@ export default function DashboardLayout({
 
           {/* Drawer panel */}
           <div className="absolute inset-y-0 left-0 w-[280px] shadow-2xl">
-            <Sidebar onLogout={handleLogout} isMobile onClose={closeDrawer} />
+            <Sidebar
+              onLogout={handleLogout}
+              isMobile
+              onClose={closeDrawer}
+              isAdmin={isAdmin}
+            />
           </div>
         </div>
       )}

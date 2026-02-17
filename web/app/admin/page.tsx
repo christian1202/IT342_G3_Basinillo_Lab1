@@ -38,7 +38,15 @@ export default function AdminPage() {
           return;
         }
 
+        console.log("Admin Check - User ID:", user.id);
+        console.log("Admin Check - Fetched Profile:", profile);
+        console.log("Admin Check - Role:", profile?.role);
+
         if (profile?.role !== "admin") {
+          console.warn(
+            "Access Denied: User is not admin. Role:",
+            profile?.role,
+          );
           router.push("/dashboard");
           return;
         }

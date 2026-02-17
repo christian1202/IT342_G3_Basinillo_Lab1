@@ -52,7 +52,21 @@
 - [x] **Build Configuration**: Upgraded to Java 17 and fixed dependency version mismatches.
 - [x] **Documentation**: Updated README with mobile app details and tech stack.
 
-## 🔮 Phase 6: Future Improvements (ROADMAP)
+## �️ Phase 6: Admin Command Center (COMPLETED)
+
+- [x] **Backend Enhancements**:
+  - [x] Updated `Shipment` entity with `serviceFee` and `clientName`.
+  - [x] Added `DELAYED` and `CANCELLED` statuses to `ShipmentStatus` enum.
+  - [x] Implemented Seeding API (`/api/seed`) for realistic data generation.
+- [x] **Admin UI & Security**:
+  - [x] Built `AdminDashboard` with Recharts (Revenue Trends) and KPI Cards.
+  - [x] Implemented RBAC: Secured `/admin` route for Admin users only.
+  - [x] Added `AdminPage` with role verification and unauthorized redirection.
+- [x] **Navigation & UX**:
+  - [x] Implemented Auto-Redirection to `/admin` for admin users on login.
+  - [x] Added "Command Center" distinct link to Sidebar for easy access.
+
+## �🔮 Phase 7: Future Improvements (ROADMAP)
 
 - [ ] **Search & Filter**: Add search bar to filter shipments by BL Number.
 - [ ] **Dark Mode**: Add theme toggle (Light/Dark).
