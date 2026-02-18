@@ -66,10 +66,20 @@
   - [x] Implemented Auto-Redirection to `/admin` for admin users on login.
   - [x] Added "Command Center" distinct link to Sidebar for easy access.
 
-## �🔮 Phase 7: Future Improvements (ROADMAP)
+## 🚂 Phase 8: Backend Infrastructure (Spring Boot) (COMPLETED)
+
+- [x] **Containerization**: Created `Dockerfile` for multi-stage Java 17 builds.
+- [x] **Cloud Configuration**: Setup Railway deployment with Environment Variables.
+- [x] **Database Connectivity**: Configured JDBC connection pooling (HikariCP) for production.
+- [x] **Security**:
+  - [x] Implement robust CORS policy (Allowed `http://localhost:3000` & Production Domain).
+  - [x] Secured API endpoints with `SecurityConfig`.
+- [x] **Integration**: Connected Next.js frontend to Spring Boot backend via `process.env.NEXT_PUBLIC_API_URL`.
+
+## 🔮 Phase 9: Future Improvements (ROADMAP)
 
 - [ ] **Search & Filter**: Add search bar to filter shipments by BL Number.
 - [ ] **Dark Mode**: Add theme toggle (Light/Dark).
 - [ ] **Export Data**: Add "Export to CSV" button for reporting.
-- [ ] **Spring Boot Integration**: Connect Java backend endpoints for specific data validation.
+- [x] **Spring Boot Integration**: Connect Java backend endpoints for specific data validation.
 - [ ] **Map View**: Visualize shipment coordinates on a map.
