@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* 1. Tell Vercel to ignore grammar mistakes so we can deploy */
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // eslint config removed as it is deprecated in Next.js 16+
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -14,6 +12,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "**.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "**.placeholder.supabase.co", // Just in case
       },
     ],
   },
