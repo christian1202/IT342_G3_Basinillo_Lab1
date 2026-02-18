@@ -23,9 +23,17 @@ export async function syncUserWithBackend(session: Session): Promise<void> {
     avatarUrl: user.user_metadata?.avatar_url ?? "",
   };
 
+  /*
+   * [Fix for 405 Error]
+   * We explicitly log the URL to help debug if it's being redirected (HTTP -> HTTPS).
+   * We also ensure 'credentials: include' is set for cross-origin Production requests.
+   */
+  console.log(`Syncing user with backend: ${BACKEND_URL}/api/users/sync`);
+
   const response = await fetch(`${BACKEND_URL}/api/users/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include", // Required for cross-site cookies (Vercel -> Railway)
     body: JSON.stringify(payload),
   });
 
