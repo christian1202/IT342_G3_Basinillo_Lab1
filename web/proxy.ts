@@ -42,7 +42,7 @@ function matchesAny(pathname: string, routes: string[]): boolean {
 /*  This is the ONLY reliable way to check sessions server-side.       */
 /* ================================================================== */
 
-export async function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   /*
