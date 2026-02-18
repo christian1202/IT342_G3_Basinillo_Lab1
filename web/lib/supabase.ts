@@ -10,10 +10,16 @@ import { createBrowserClient } from "@supabase/ssr";
 /* ================================================================== */
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  /* CTO NOTE: We add '||' to provide a fake value during the Build process.
+     This prevents the "Error: supabaseKey is required" crash.
+     When the app runs in the real browser, it will use the real keys.
+  */
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+
+  return createBrowserClient(supabaseUrl, supabaseKey);
 }
 
 /**
