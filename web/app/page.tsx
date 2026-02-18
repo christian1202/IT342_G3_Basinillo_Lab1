@@ -1,11 +1,19 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import {
   Anchor,
   Truck,
   BarChart3,
   ShieldCheck,
   ArrowRight,
+  Menu,
+  X,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 
 /* ================================================================== */
 /*  Landing Page (Root)                                                */
@@ -14,6 +22,9 @@ import {
 /* ================================================================== */
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950 transition-colors">
       {/* ============================================================ */}
@@ -31,14 +42,62 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Nav Actions */}
-          <Link
-            href="/login"
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-          >
-            Log in
-          </Link>
+          {/* Desktop Nav Actions */}
+          <div className="hidden items-center gap-4 md:flex">
+            <button
+              onClick={toggleTheme}
+              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
+            <Link
+              href="/login"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            >
+              Log in
+            </Link>
+          </div>
+
+          {/* Mobile Menu Toggle */}
+          <div className="flex items-center gap-4 md:hidden">
+            <button
+              onClick={toggleTheme}
+              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg dark:border-slate-800 dark:bg-slate-950 md:hidden">
+            <Link
+              href="/login"
+              className="block rounded-lg px-4 py-2 text-base font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Log in
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* ============================================================ */}

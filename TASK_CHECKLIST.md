@@ -2,7 +2,7 @@
 
 ## 🚀 Phase 1: Foundation & Setup (COMPLETED)
 
-- [x] **Initialize Project**: Create Next.js 16 (App Router) project with TypeScript.
+- [x] **Initialize Project**: Create Next.js 14 (App Router) project with TypeScript.
 - [x] **UI Framework**: Install and configure Tailwind CSS.
 - [x] **Database Setup**: Create Supabase project and configure PostgreSQL.
 - [x] **Environment Variables**: Setup `.env.local` with Supabase keys.
@@ -13,7 +13,7 @@
 - [x] **Login UI**: Create responsive Login page (`/login`).
 - [x] **Supabase Auth**: Implement `signInWithPassword` and session management.
 - [x] **Middleware Protection**:
-  - [x] Create `proxy.ts` (formerly `middleware.ts`) for Next.js 16+ compatibility.
+  - [x] Create `proxy.ts` (formerly `middleware.ts`) for Next.js 14+ compatibility.
   - [x] Protect `/dashboard` routes from unauthenticated access.
   - [x] Fix infinite redirect loops and session persistence.
 
@@ -48,8 +48,25 @@
 - [x] **Client Setup**: Implementation `SupabaseClient` singleton.
 - [x] **UI Logic**: Built `ShipmentListScreen` with async data fetching.
 - [x] **Security**: Secured API credentials using `local.properties` and `BuildConfig`.
+- [x] **Authentication UI**: Built Login and Register screens with Supabase Auth integration.
+- [x] **Build Configuration**: Upgraded to Java 17 and fixed dependency version mismatches.
+- [x] **Documentation**: Updated README with mobile app details and tech stack.
 
-## 🔮 Phase 6: Future Improvements (ROADMAP)
+## �️ Phase 6: Admin Command Center (COMPLETED)
+
+- [x] **Backend Enhancements**:
+  - [x] Updated `Shipment` entity with `serviceFee` and `clientName`.
+  - [x] Added `DELAYED` and `CANCELLED` statuses to `ShipmentStatus` enum.
+  - [x] Implemented Seeding API (`/api/seed`) for realistic data generation.
+- [x] **Admin UI & Security**:
+  - [x] Built `AdminDashboard` with Recharts (Revenue Trends) and KPI Cards.
+  - [x] Implemented RBAC: Secured `/admin` route for Admin users only.
+  - [x] Added `AdminPage` with role verification and unauthorized redirection.
+- [x] **Navigation & UX**:
+  - [x] Implemented Auto-Redirection to `/admin` for admin users on login.
+  - [x] Added "Command Center" distinct link to Sidebar for easy access.
+
+## �🔮 Phase 7: Future Improvements (ROADMAP)
 
 - [ ] **Search & Filter**: Add search bar to filter shipments by BL Number.
 - [ ] **Dark Mode**: Add theme toggle (Light/Dark).

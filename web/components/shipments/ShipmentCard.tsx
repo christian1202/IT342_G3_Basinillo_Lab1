@@ -90,7 +90,7 @@ export default function ShipmentCard({
       className="group relative cursor-pointer rounded-xl border border-slate-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-slate-700/60 dark:bg-slate-800/70 dark:hover:border-indigo-600"
       onClick={() => onClick?.(shipment)}
     >
-      {/* ---- Top Row: BL Number + Status Badge ---- */}
+      {/* ---- Top Row: BL Number + Status Badge + Edit ---- */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <Tag className="h-4 w-4 shrink-0 text-indigo-500" />
@@ -99,13 +99,46 @@ export default function ShipmentCard({
           </h3>
         </div>
 
-        {/* Status badge */}
-        <span
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${style.badge}`}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-          {style.label}
-        </span>
+        {/* Status Badge + Edit Button Group */}
+        <div className="flex items-center gap-4">
+          <span
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${style.badge}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+            {style.label}
+          </span>
+
+          {/* Edit Button (Visible) */}
+          <button
+            type="button"
+            className="text-blue-600 transition-colors hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+            aria-label="Edit shipment"
+            onClick={(e) => {
+              e.stopPropagation(); // Pass up to parent row click (or handle here if preferred, but list usually handles row click)
+              onClick?.(shipment);
+            }}
+          >
+            {/* Reusing existing Pencil icon or just text if preferred, but user requested Edit Button specifically. Use Pencil from lucide if available or just text 'Edit' if icon not imported. 
+                 Wait, user said "Edit Button (Pencil icon)". I need to check imports.
+                 Top imports: Ship, Calendar, Package, Tag, Trash2.
+                 I need to import Pencil.
+             */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* ---- Detail Grid ---- */}

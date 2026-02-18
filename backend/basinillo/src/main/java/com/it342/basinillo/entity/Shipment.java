@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +82,14 @@ public class Shipment {
     /** Estimated Time of Arrival at the port of destination. */
     @Column(name = "arrival_date")
     private LocalDateTime arrivalDate;
+
+    /** Service fee charged for this shipment (revenue). */
+    @Column(name = "service_fee")
+    private BigDecimal serviceFee;
+
+    /** Name of the client company (e.g., "Toyota Cebu"). */
+    @Column(name = "client_name")
+    private String clientName;
 
     /* ------------------------------------------------------------------ */
     /*  Status                                                             */

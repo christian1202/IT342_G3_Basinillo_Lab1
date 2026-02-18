@@ -5,12 +5,14 @@ import com.it342.basinillo.entity.ShipmentStatus;
 import com.it342.basinillo.entity.User;
 import com.it342.basinillo.repository.ShipmentRepository;
 import com.it342.basinillo.repository.UserRepository;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Objects;
 
 /**
  * Service layer for Shipment management.
@@ -53,7 +55,8 @@ public class ShipmentService {
      * @throws IllegalArgumentException if user not found or BL number is duplicate
      */
     @Transactional
-    public Shipment createShipment(UUID userId,
+    @SuppressWarnings("null")
+    public Shipment createShipment(@NonNull UUID userId,
                                    String blNumber,
                                    String vesselName,
                                    String containerNumber,
@@ -81,7 +84,7 @@ public class ShipmentService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        return shipmentRepository.save(shipment);
+        return Objects.requireNonNull(shipmentRepository.save(shipment));
     }
 
     /* ================================================================== */
@@ -95,7 +98,7 @@ public class ShipmentService {
      * @return list of shipments ordered by creation date descending
      */
     @Transactional(readOnly = true)
-    public List<Shipment> findShipmentsByUser(UUID userId) {
+    public List<Shipment> findShipmentsByUser(@NonNull UUID userId) {
         return shipmentRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
@@ -107,7 +110,7 @@ public class ShipmentService {
      * @throws IllegalArgumentException if not found
      */
     @Transactional(readOnly = true)
-    public Shipment findShipmentById(UUID shipmentId) {
+    public Shipment findShipmentById(@NonNull UUID shipmentId) {
         return shipmentRepository.findById(shipmentId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Shipment not found: " + shipmentId));

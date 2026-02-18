@@ -41,6 +41,7 @@ public class UserService {
      * @param request the UserSyncDTO containing user details from the frontend
      * @return the saved (created or updated) User entity
      */
+    @SuppressWarnings("null")
     public User syncUser(UserSyncDTO request) {
         UUID userId = UUID.fromString(request.getUuid());
 

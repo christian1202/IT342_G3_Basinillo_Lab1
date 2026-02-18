@@ -35,6 +35,7 @@ export interface IUserProfile {
   full_name: string;
   role: string; /* "admin" | "broker" | "client"        */
   avatar_url: string;
+  created_at?: string; /* ISO-8601 timestamp */
 }
 
 /* ------------------------------------------------------------------ */
@@ -70,6 +71,12 @@ export interface IShipment {
   arrival_date: string | null; /* ISO-8601 timestamp (ETA)       */
   status: ShipmentStatus;
   created_at: string; /* ISO-8601 timestamp             */
+  destination_city?: string | null;
+  destination_port?: string | null;
+  origin_city?: string | null;
+  origin_port?: string | null;
+  service_fee: number; /* Brokerage revenue */
+  client_name?: string | null;
 }
 
 /**
@@ -82,6 +89,8 @@ export interface ICreateShipmentPayload {
   vessel_name?: string;
   container_number?: string;
   arrival_date?: string;
+  service_fee?: number;
+  client_name?: string;
 }
 
 /**
@@ -93,6 +102,8 @@ export interface IUpdateShipmentPayload {
   container_number?: string;
   arrival_date?: string;
   status?: ShipmentStatus;
+  service_fee?: number;
+  client_name?: string;
 }
 
 /* ------------------------------------------------------------------ */
