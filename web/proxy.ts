@@ -8,7 +8,13 @@ import { NextRequest, NextResponse } from "next/server";
 /* ================================================================== */
 
 /** Routes that require an active session (redirect to /login if none). */
-const PROTECTED_ROUTES = ["/dashboard", "/shipments", "/status", "/settings"];
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/shipments",
+  "/status",
+  "/settings",
+  "/admin", // IMPORTANT: Added /admin based on middleware.ts logic
+];
 
 /** Routes reserved for guests (redirect to /dashboard if session exists). */
 const AUTH_ROUTES = ["/login", "/register"];
@@ -28,7 +34,7 @@ function matchesAny(pathname: string, routes: string[]): boolean {
 }
 
 /* ================================================================== */
-/*  PROXY                                                              */
+/*  PROXY (Middleware)                                                 */
 /*  The "bouncer" — runs before every matched request (Next.js 16+).   */
 /*                                                                     */
 /*  Uses @supabase/ssr's createServerClient which reads/writes auth    */
@@ -36,7 +42,7 @@ function matchesAny(pathname: string, routes: string[]): boolean {
 /*  This is the ONLY reliable way to check sessions server-side.       */
 /* ================================================================== */
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   /*
@@ -114,7 +120,7 @@ export async function proxy(request: NextRequest) {
 
   /* ---- Debug logging (remove once stable) ---- */
   console.log(
-    `[proxy] path=${pathname} | hasSession=${hasSession} | user=${user?.email ?? "none"}`,
+    `[middleware] path=${pathname} | hasSession=${hasSession} | user=${user?.email ?? "none"}`,
   );
 
   /* ---- Rule 1: Protect private routes ---- */
@@ -123,7 +129,7 @@ export async function proxy(request: NextRequest) {
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirectTo", pathname);
 
-    console.log(`[proxy] → redirecting to /login (no session)`);
+    console.log(`[middleware] → redirecting to /login (no session)`);
     return NextResponse.redirect(loginUrl, 302);
   }
 
@@ -135,7 +141,9 @@ export async function proxy(request: NextRequest) {
     targetUrl.pathname = redirectTo;
     targetUrl.searchParams.delete("redirectTo");
 
-    console.log(`[proxy] → redirecting to ${redirectTo} (already logged in)`);
+    console.log(
+      `[middleware] → redirecting to ${redirectTo} (already logged in)`,
+    );
     return NextResponse.redirect(targetUrl, 302);
   }
 
@@ -145,7 +153,7 @@ export async function proxy(request: NextRequest) {
 
 /* ================================================================== */
 /*  MATCHER                                                            */
-/*  Only run proxy on these paths — skip static assets, API routes,   */
+/*  Only run middleware on these paths — skip static assets, API routes, */
 /*  images, and Next.js internals.                                     */
 /* ================================================================== */
 
@@ -155,6 +163,7 @@ export const config = {
     "/shipments/:path*",
     "/status/:path*",
     "/settings/:path*",
+    "/admin/:path*",
     "/login",
     "/register",
   ],
