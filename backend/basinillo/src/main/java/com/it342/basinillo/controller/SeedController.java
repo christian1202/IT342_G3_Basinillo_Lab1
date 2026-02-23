@@ -72,7 +72,7 @@ public class SeedController {
                     .createdAt(date)
                     .build();
 
-            java.util.Objects.requireNonNull(shipmentRepository.save(shipment));
+            shipmentRepository.save(java.util.Objects.requireNonNull(shipment));
         }
 
         return ResponseEntity.ok("Successfully seeded 40 shipments.");

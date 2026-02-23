@@ -76,22 +76,25 @@ public class ShipmentController {
     }
 
     /* ================================================================== */
-    /*  GET /api/shipments?userId={uuid} — List shipments for a user       */
+    /*  GET /api/shipments — List shipments (RBAC Protected)               */
     /* ================================================================== */
 
     /**
-     * Returns all shipments for the specified user, newest first.
+     * Retrieves shipments based on the authenticated user's role.
+     * <p>
+     * - ADMIN: Returns ALL shipments.
+     * - USER: Returns ONLY their owned shipments.
      *
-     * @param userId the UUID of the shipment owner (query parameter)
-     * @return 200 OK with a list of Shipment entities
+     * @param authentication the Spring Security principal (injected automatically)
+     * @return 200 OK with the list of accessible shipments
      */
     @GetMapping
-    @SuppressWarnings("null")
-    public ResponseEntity<List<Shipment>> getShipmentsByUser(
-            @RequestParam("userId") UUID userId) {
+    public ResponseEntity<List<Shipment>> getShipments(org.springframework.security.core.Authentication authentication) {
+        String email = authentication.getName();
+        var authorities = authentication.getAuthorities();
 
-        List<Shipment> shipmentList = shipmentService.findShipmentsByUser(userId);
-        return ResponseEntity.ok(shipmentList);
+        List<Shipment> shipments = shipmentService.getShipmentsForUser(email, authorities);
+        return ResponseEntity.ok(shipments);
     }
 
     /* ================================================================== */

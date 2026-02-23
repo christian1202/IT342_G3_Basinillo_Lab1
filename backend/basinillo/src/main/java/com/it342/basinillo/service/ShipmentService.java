@@ -115,4 +115,31 @@ public class ShipmentService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Shipment not found: " + shipmentId));
     }
+    /**
+     * Retrieves shipments based on the user's role.
+     * <p>
+     * - ADMIN: Returns ALL shipments (for analysis).
+     * - USER: Returns ONLY shipments owned by the user.
+     *
+     * @param email       the email of the authenticated user
+     * @param authorities the roles/authorities of the authenticated user
+     * @return list of shipments accessible to the user
+     */
+    @Transactional(readOnly = true)
+    public List<Shipment> getShipmentsForUser(String email,
+                                              java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> authorities) {
+        // Check for Admin role
+        boolean isAdmin = authorities.stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdmin) {
+            return shipmentRepository.findAll();
+        }
+
+        // For regular users, look up their ID and fetch their specific shipments
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
+
+        return shipmentRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+    }
 }
