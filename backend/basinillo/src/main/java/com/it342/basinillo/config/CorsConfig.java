@@ -38,13 +38,16 @@ public class CorsConfig implements WebMvcConfigurer {
     // ──────────────────────────────────────────────
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
-        registry.addMapping("/**")
-                // Use allowedOriginPatterns for wildcards like https://*.vercel.app
-                .allowedOriginPatterns(allowedOrigins.toArray(new String[0]))
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600); // cache pre-flight response for 1 hour
+        String[] origins = allowedOrigins.toArray(new String[0]);
+        if (origins != null) {
+            registry.addMapping("/**")
+                    // Use allowedOriginPatterns for wildcards like https://*.vercel.app
+                    .allowedOriginPatterns(origins)
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedHeaders("*")
+                    .allowCredentials(true)
+                    .maxAge(3600); // cache pre-flight response for 1 hour
+        }
     }
 
     // ──────────────────────────────────────────────
