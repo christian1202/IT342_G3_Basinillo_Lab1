@@ -52,7 +52,9 @@ export type ShipmentStatus =
   | "ARRIVED"
   | "CUSTOMS_HOLD"
   | "RELEASED"
-  | "DELIVERED";
+  | "DELIVERED"
+  | "DELAYED"
+  | "CANCELLED";
 
 /* ------------------------------------------------------------------ */
 /*  Shipment                                                           */

@@ -7,20 +7,16 @@ import lombok.NoArgsConstructor;
 /**
  * Data Transfer Object for the /api/users/sync endpoint.
  *
- * We use a DTO instead of exposing the raw User entity to the public API.
- * This decouples the API contract from the database schema and allows us
- * to control exactly which fields are accepted from the frontend.
+ * Decouples the API contract from the database schema. Accepts
+ * Clerk user data from the frontend for upsert into the users table.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserSyncDTO {
 
-    /**
-     * The Supabase Auth user UUID, received as a String and parsed to UUID in the
-     * service.
-     */
-    private String uuid;
+    /** Clerk external user ID (e.g., "user_2abc123..."). */
+    private String clerkId;
 
     private String email;
 

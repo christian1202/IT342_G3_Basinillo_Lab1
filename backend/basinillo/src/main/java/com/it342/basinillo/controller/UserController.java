@@ -27,16 +27,10 @@ public class UserController {
     /**
      * POST /api/users/sync
      *
-     * Called by the frontend after a successful Google Login via Supabase Auth.
-     * Ensures the user exists in our backend database (public.profiles table).
+     * Called by the frontend after a successful Clerk authentication.
+     * Ensures the user exists in our backend database (users table).
      *
-     * Flow:
-     * 1. Frontend authenticates user with Google via Supabase Auth.
-     * 2. Frontend calls this endpoint with the user's details.
-     * 3. Backend performs an "Upsert" — creates or updates the user profile.
-     * 4. Returns the saved user profile.
-     *
-     * @param request the UserSyncDTO containing user details
+     * @param request the UserSyncDTO containing Clerk user details
      * @return ResponseEntity containing the synced User
      */
     @PostMapping("/sync")

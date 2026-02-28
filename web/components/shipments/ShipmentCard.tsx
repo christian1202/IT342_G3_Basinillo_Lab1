@@ -1,7 +1,14 @@
 "use client";
 
-import { Ship, Calendar, Package, Tag, Trash2 } from "lucide-react";
-import type { IShipment } from "@/types/database";
+import {
+  Ship,
+  Calendar,
+  Package,
+  Tag,
+  Trash2,
+  ChevronDown,
+} from "lucide-react";
+import type { IShipment, ShipmentStatus } from "@/types/database";
 
 /* ================================================================== */
 /*  STATUS STYLING MAP                                                 */
@@ -46,6 +53,18 @@ const STATUS_STYLES: Record<
     dot: "bg-violet-500",
     label: "Delivered",
   },
+  DELAYED: {
+    badge:
+      "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+    dot: "bg-orange-500",
+    label: "Delayed",
+  },
+  CANCELLED: {
+    badge:
+      "bg-slate-100 text-slate-600 dark:bg-slate-700/40 dark:text-slate-400",
+    dot: "bg-slate-400",
+    label: "Cancelled",
+  },
 };
 
 /** Fallback for unknown statuses to prevent runtime crashes. */
@@ -54,6 +73,18 @@ const DEFAULT_STYLE = {
   dot: "bg-slate-500",
   label: "Unknown",
 };
+
+/** All available statuses for the dropdown selector. */
+const ALL_STATUSES: ShipmentStatus[] = [
+  "PENDING",
+  "IN_TRANSIT",
+  "ARRIVED",
+  "CUSTOMS_HOLD",
+  "RELEASED",
+  "DELIVERED",
+  "DELAYED",
+  "CANCELLED",
+];
 
 /* ================================================================== */
 /*  ShipmentCard                                                       */
@@ -67,12 +98,15 @@ interface ShipmentCardProps {
   onClick?: (shipment: IShipment) => void;
   /** Optional handler for deleting a shipment. */
   onDelete?: (shipment: IShipment) => void;
+  /** Step 4: Optional handler for changing the shipment status. */
+  onStatusChange?: (shipment: IShipment, newStatus: ShipmentStatus) => void;
 }
 
 export default function ShipmentCard({
   shipment,
   onClick,
   onDelete,
+  onStatusChange,
 }: ShipmentCardProps): React.JSX.Element {
   const style = STATUS_STYLES[shipment.status] ?? DEFAULT_STYLE;
 
@@ -99,14 +133,36 @@ export default function ShipmentCard({
           </h3>
         </div>
 
-        {/* Status Badge + Edit Button Group */}
+        {/* Status Badge / Dropdown + Edit Button Group */}
         <div className="flex items-center gap-4">
-          <span
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${style.badge}`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-            {style.label}
-          </span>
+          {onStatusChange ? (
+            /* Step 4: Interactive status dropdown */
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <select
+                value={shipment.status}
+                onChange={(e) => {
+                  onStatusChange(shipment, e.target.value as ShipmentStatus);
+                }}
+                className={`appearance-none cursor-pointer rounded-full py-1 pl-2.5 pr-7 text-xs font-semibold outline-none transition-all hover:ring-2 hover:ring-indigo-300 focus:ring-2 focus:ring-indigo-400 dark:hover:ring-indigo-600 dark:focus:ring-indigo-500 ${style.badge}`}
+                aria-label="Change shipment status"
+              >
+                {ALL_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_STYLES[s]?.label ?? s}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 opacity-50" />
+            </div>
+          ) : (
+            /* Static status badge (original behavior) */
+            <span
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${style.badge}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+              {style.label}
+            </span>
+          )}
 
           {/* Edit Button (Visible) */}
           <button
@@ -114,15 +170,10 @@ export default function ShipmentCard({
             className="text-blue-600 transition-colors hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
             aria-label="Edit shipment"
             onClick={(e) => {
-              e.stopPropagation(); // Pass up to parent row click (or handle here if preferred, but list usually handles row click)
+              e.stopPropagation();
               onClick?.(shipment);
             }}
           >
-            {/* Reusing existing Pencil icon or just text if preferred, but user requested Edit Button specifically. Use Pencil from lucide if available or just text 'Edit' if icon not imported. 
-                 Wait, user said "Edit Button (Pencil icon)". I need to check imports.
-                 Top imports: Ship, Calendar, Package, Tag, Trash2.
-                 I need to import Pencil.
-             */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"

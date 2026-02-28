@@ -1,7 +1,9 @@
 package com.it342.basinillo.controller;
 
+import com.it342.basinillo.dto.UpdateStatusRequest;
 import com.it342.basinillo.entity.Shipment;
 import com.it342.basinillo.service.ShipmentService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +42,7 @@ public class ShipmentController {
      *
      * Expects a JSON body with the following fields:
      * {
-     *   "userId":          "uuid-string",
+     *   "brokerId":        "uuid-string",
      *   "blNumber":        "BL-2026-001",
      *   "vesselName":      "MV Ever Given",
      *   "containerNumber": "MSKU1234567",
@@ -55,9 +57,9 @@ public class ShipmentController {
     public ResponseEntity<?> createShipment(@RequestBody Map<String, String> payload) {
 
         try {
-            String userIdStr = payload.get("userId");
-            if (userIdStr == null) throw new IllegalArgumentException("userId is required");
-            UUID userId = UUID.fromString(userIdStr);
+            String brokerIdStr = payload.get("brokerId");
+            if (brokerIdStr == null) throw new IllegalArgumentException("brokerId is required");
+            UUID brokerId = UUID.fromString(brokerIdStr);
             String blNumber         = payload.get("blNumber");
             String vesselName       = payload.get("vesselName");
             String containerNumber  = payload.get("containerNumber");
@@ -66,7 +68,7 @@ public class ShipmentController {
                     : null;
 
             Shipment created = shipmentService.createShipment(
-                    userId, blNumber, vesselName, containerNumber, arrivalDate);
+                    brokerId, blNumber, vesselName, containerNumber, arrivalDate);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
 
@@ -114,6 +116,41 @@ public class ShipmentController {
         try {
             Shipment shipment = shipmentService.findShipmentById(shipmentId);
             return ResponseEntity.ok(shipment);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /* ================================================================== */
+    /*  PATCH /api/shipments/{id}/status — Update shipment status          */
+    /* ================================================================== */
+
+    /**
+     * Updates the lifecycle status of a shipment.
+     *
+     * Consumes:
+     *   - Step 1: {@link UpdateStatusRequest} DTO (validated with @Valid)
+     *   - Step 2: {@link ShipmentService#updateStatus} (business logic)
+     *
+     * Example request:
+     *   PATCH /api/shipments/550e8400-e29b-41d4-a716-446655440000/status
+     *   Body: { "status": "IN_TRANSIT" }
+     *
+     * @param shipmentId the UUID of the shipment to update
+     * @param request    the validated DTO containing the new status
+     * @return 200 OK with the updated Shipment, or 404 Not Found
+     */
+    @PatchMapping("/{id}/status")
+    @SuppressWarnings("null")
+    public ResponseEntity<?> updateShipmentStatus(
+            @PathVariable("id") UUID shipmentId,
+            @Valid @RequestBody UpdateStatusRequest request) {
+
+        try {
+            Shipment updated = shipmentService.updateStatus(shipmentId, request);
+            return ResponseEntity.ok(updated);
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

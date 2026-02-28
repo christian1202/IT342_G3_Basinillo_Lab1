@@ -1,37 +1,20 @@
 package com.it342.basinillo.entity;
 
 /**
- * Enumeration of possible shipment lifecycle statuses.
+ * The 5-stage shipment lifecycle as defined by Philippine customs brokerage.
  *
- * Represents the journey of cargo through the customs brokerage
- * pipeline — from initial filing to final delivery.
+ * Every shipment progresses through these stages sequentially:
  *
- * Typical flow:
- *   PENDING → IN_TRANSIT → ARRIVED → CUSTOMS_HOLD → RELEASED → DELIVERED
+ *   ARRIVED          — Vessel has docked; broker receives BL, CI, Packing List.
+ *   LODGED           — Import entry filed with the Bureau of Customs (BOC).
+ *   UNDER_ASSESSMENT — BOC reviews the entry; assigns lane (Green/Yellow/Red).
+ *   PAYMENT_PENDING  — Duties and taxes are being paid via authorized bank.
+ *   RELEASED         — Gate Pass issued; container cleared for pickup.
  */
 public enum ShipmentStatus {
-
-    /** Shipment has been filed but cargo has not departed yet. */
-    PENDING,
-
-    /** Cargo is currently in transit (on the water or in the air). */
-    IN_TRANSIT,
-
-    /** Vessel has arrived at the port of destination. */
     ARRIVED,
-
-    /** Cargo is being held by customs for inspection or documentation issues. */
-    CUSTOMS_HOLD,
-
-    /** Customs has cleared the shipment; ready for pickup or delivery. */
-    RELEASED,
-
-    /** Cargo has been delivered to the consignee. */
-    DELIVERED,
-
-    /** Shipment is delayed due to unforeseen circumstances. */
-    DELAYED,
-
-    /** Shipment has been cancelled by the user or admin. */
-    CANCELLED
+    LODGED,
+    UNDER_ASSESSMENT,
+    PAYMENT_PENDING,
+    RELEASED
 }

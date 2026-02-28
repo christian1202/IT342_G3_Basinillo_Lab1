@@ -134,6 +134,40 @@ export async function updateShipment(
 }
 
 /* ------------------------------------------------------------------ */
+/*  UPDATE — Status only (Step 4: frontend chain to backend PATCH)     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Updates only the lifecycle status of an existing shipment.
+ *
+ * Frontend counterpart to the backend chain:
+ *   Step 1 → UpdateStatusRequest DTO
+ *   Step 2 → ShipmentService.updateStatus()
+ *   Step 3 → PATCH /api/shipments/{id}/status
+ *
+ * @param shipmentId - The UUID of the shipment to update
+ * @param status     - The new ShipmentStatus value
+ * @returns A result containing the updated shipment or an error message
+ */
+export async function updateShipmentStatus(
+  shipmentId: string,
+  status: import("@/types/database").ShipmentStatus,
+): Promise<IServiceResult<IShipment>> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({ status })
+    .eq("id", shipmentId)
+    .select()
+    .single();
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: data as IShipment, error: null };
+}
+
+/* ------------------------------------------------------------------ */
 /*  DELETE                                                             */
 /* ------------------------------------------------------------------ */
 

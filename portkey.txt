@@ -1,0 +1,479 @@
+
+🗝️
+
+PORTKEY
+Intelligent Customs Clearance Platform
+
+Project Name	PortKey
+Version	v1.0 — Planning Phase
+Date	February 2026
+Platforms	Web · iOS · Android
+Type	Student Startup / SaaS Product
+Market	Licensed Customs Brokers — Philippines
+
+
+1. Executive Summary
+PortKey is an AI-powered customs clearance management platform designed for licensed Customs Brokers and Freight Forwarders in the Philippines. It replaces messy Excel files, scattered WhatsApp threads, and manual BOC tariff book searches with a single, intelligent platform that guides every shipment from vessel arrival to container release.
+
+The platform targets a real, painful problem: Philippine customs brokerage is a high-stakes, time-sensitive industry where a single missed deadline or misclassified product code can cost a client tens of thousands of pesos in fees and fines. PortKey solves this with three core AI-powered features and a real-time shipment tracking dashboard — available on Web, iOS, and Android.
+
+💡 The Core Value Proposition
+PortKey does not just manage shipments — it actively prevents the three most expensive mistakes in customs brokerage: demurrage fee overruns, HS Code misclassification penalties, and manual data entry errors.
+
+2. Problem Statement
+2.1 Demurrage Doomsday — The Silent Money Drain
+Ports charge ₱2,000–₱5,000 per container per day after the free storage window (typically 5–7 days) expires. Brokers today track these critical deadlines in spreadsheets shared via email — no real-time updates, no automated alerts, no urgency indicators. A broker handling 15+ active shipments simultaneously cannot reliably monitor this manually.
+
+2.2 Manual Data Entry — The Fat-Finger Nightmare
+A single Commercial Invoice can have 50+ line items. Manually re-keying product descriptions, container numbers, gross weights, and values into the BOC lodgment system is both time-consuming (20+ minutes per document) and error-prone. One incorrect digit in a container number freezes an entire shipment until corrected through a formal amendment process.
+
+2.3 HS Code Misclassification — The Compliance Trap
+Every imported good must be assigned an HS Code from the ASEAN Harmonized Tariff Nomenclature (AHTN). The difference between "100% Cotton T-Shirts" (HS 6109.10, 7% duty) and "Polycotton T-Shirts" (HS 6109.90, 15% duty) is not always obvious. Wrong classification triggers BOC penalties, shipment holds, and in extreme cases, smuggling investigations. Currently brokers search a 1,000+ page PDF manually.
+
+
+
+3. Shipment Lifecycle (Domain Model)
+Every feature in PortKey is built around supporting this 5-stage shipment lifecycle. Understanding this is understanding the entire product.
+
+Stage	Name	Key Event	PortKey System Action
+1 — Arrival	Vessel Docks	Broker receives Bill of Lading, Commercial Invoice, Packing List	Shipment created, demurrage clock starts automatically
+2 — Lodgment	Entry Filed	Broker files import entry with BOC, declares goods and estimated tax	Entry number logged, docs uploaded to Vault, status updated
+3 — Assessment	BOC Review	BOC checks math, assigns Lane: Green / Yellow / Red	Lane status synced, Yellow/Red triggers broker alert
+4 — Payment	Duties Paid	Broker pays duties/taxes via authorized bank	OR number recorded, payment confirmed in shipment record
+5 — Release	Gate Pass Issued	Gate Pass generated, truck dispatched to collect container	Shipment closed, full audit log finalized, client notified
+
+Golden Documents (Required for Every Shipment)
+•	Bill of Lading (BL) — Proof of the shipping contract between shipper and carrier
+•	Commercial Invoice (CI) — The seller's bill; declares value and description of goods
+•	Packing List (PL) — Itemized manifest of all cargo with weights and dimensions
+
+4. Features
+4.1 Core Features
+Feature 1 — Demurrage Doomsday Clock
+A real-time visual countdown system for every active shipment's free storage window. The dashboard replaces static spreadsheet dates with urgency-driven cards that automatically escalate and alert.
+
+Property	Detail
+Trigger	Shipment created with Arrival Date input
+Calculation	Free Time Expiry = Arrival Date + Free Days (configurable per shipment, default: 7)
+Status: Safe	More than 3 days remaining — Green badge
+Status: Warning	2–3 days remaining — Orange pulsing badge + push notification to broker
+Status: Critical	Today or overdue — Red flashing badge + SMS + Email alert
+Overdue Display	Running ₱ accumulator showing estimated demurrage cost to date
+Configuration	Admin can set global default free days; broker can override per shipment
+Automation	Cron job runs daily at 8:00 AM to evaluate all active shipments
+Alerts Sent To	Assigned broker + org admin via Email (Resend) and Push (Expo + FCM)
+
+Feature 2 — Smart-Scan (AI Document Ingestion)
+A drag-and-drop document processor that uses OCR to read a Commercial Invoice or Bill of Lading PDF and automatically pre-fills the shipment entry form. What previously took 20 minutes of manual typing becomes a 10-second "verify and confirm" action.
+
+Step	Action	Technology
+1	Broker drags a PDF or image into the upload zone	React Dropzone (Next.js frontend)
+2	File uploaded to secure temporary storage	Supabase Storage (free tier)
+3	OCR engine processes document and extracts structured data	Google Cloud Document AI or Tesseract OCR
+4	NLP layer identifies fields: Consignee, Vessel, Container No., etc.	Spring Boot AI service (Java + LangChain4j)
+5	Extracted fields pre-populate the Create Shipment form	Next.js form state (React Hook Form + Zod)
+6	Confidence scores shown per field — low confidence highlighted	Frontend UI badges
+7	Broker clicks "Verify & Save" to confirm or manually correct	One-click confirmation action
+
+Supported Document Types: PDF, PNG, JPG, TIFF (max 10MB per file)
+Extracted Fields: Consignee, Shipper, Vessel Name, Voyage No., Port of Discharge, Container Numbers, Total Gross Weight, Total Value, Currency, Item Descriptions, Invoice Number, Date
+
+Feature 3 — Compliance Copilot (AI HS Code Lookup)
+An AI assistant that accepts a plain English product description and returns the best-match HS Code from the Philippine Tariff Schedule, along with the applicable duty rate, VAT, and any special permits required. It transforms a 20-minute manual tariff search into a 5-second confirmation.
+
+Step	Action	Technology
+1	Broker types a natural language description: "100% Cotton Men's T-Shirts"	Text input on shipment item form
+2	Description is sent to AI backend for classification	Next.js API Route → Spring Boot service
+3	RAG pipeline queries the Philippine Tariff Book vector database	LangChain4j + pgvector (NeonDB)
+4	LLM returns top 3 HS Code matches with confidence percentage	Google Gemini API (free tier) or OpenAI GPT-4o Mini
+5	System displays: HS Code, description, duty rate, VAT, estimated total tax	Frontend result card
+6	If item needs a permit, a flag is shown (e.g., Bureau of Standards required)	Rule-based permit checker
+7	Broker selects the correct code and it is saved to the shipment line item	Form state update
+
+⚠️ Legal Disclaimer
+Compliance Copilot results are AI-assisted estimates only. The final HS Code classification and duty assessment is the sole authority of the Bureau of Customs of the Philippines. PortKey does not guarantee the accuracy of AI-generated tariff classifications.
+
+
+
+4.2 Dashboard & Shipment Management
+Feature 4 — Shipment Dashboard
+The command center for every broker. A real-time overview of all active shipments with visual urgency indicators, filters, and quick-action buttons.
+
+•	Sortable by demurrage urgency (most at-risk containers first)
+•	Filterable by Stage, Lane Status, Broker, Client, Arrival Date Range
+•	Summary stats: Total active, overdue, released this month, total estimated duties
+•	Quick actions: Upload Document, Mark Payment, Flag Issue
+•	Color-coded lane status badges (Green / Yellow / Red) visible at a glance
+
+Feature 5 — Shipment Entry Form (Create & Edit)
+•	Step-by-step wizard: Vessel Info → Cargo Items → Documents → Review
+•	HS Code field integrates Compliance Copilot inline (auto-trigger on item description)
+•	Smart-Scan button available at the top of the form to auto-fill from uploaded PDF
+•	Multiple container support per shipment
+•	Duty and VAT auto-calculated and displayed as user fills in values
+•	Supports draft-saving so brokers can pause and resume
+
+Feature 6 — Document Vault
+•	Centralized file storage per shipment (BL, CI, Packing List, Permits, COO, etc.)
+•	Version history: previous document versions are never deleted
+•	Secure shareable links with expiry time (for sending to clients or BOC)
+•	Document status tagging: Draft, Submitted, Accepted, Rejected
+•	Preview PDF and images in-browser without downloading
+
+4.3 Notifications & Communication
+Feature 7 — Multi-Channel Alert System
+Trigger	Channel	Recipient	Provider
+Demurrage: 3 days left	Email + Push	Assigned Broker	Resend (Email) + Expo FCM (Push)
+Demurrage: Today	Email + Push + SMS	Broker + Org Admin	Resend + Expo + Twilio (free trial)
+Shipment stage changed	Email + Push	Client / Importer	Resend + Expo
+Lane assigned RED	Email + Push	Broker + Admin	Resend + Expo
+Document uploaded	In-app	Team members on org	WebSocket (Spring Boot)
+BOC payment confirmed	Email	Client	Resend
+Gate Pass issued	Email + Push	Client + Broker	Resend + Expo
+
+4.4 Client Portal
+Feature 8 — Importer / Client View
+A read-only portal for importers to monitor the status of their own shipments without needing to call or message their broker. Reduces broker interruptions and increases importer confidence.
+
+•	Importers log in via a separate link and see only their own shipments
+•	Shipment timeline showing current stage and history
+•	Document download access (broker-controlled: broker decides which docs are visible)
+•	Demurrage cost estimate visible — importers see the risk themselves
+•	Notification when shipment progresses to next stage
+•	No access to other clients, broker financials, or internal notes
+
+4.5 Organization & User Management
+Feature 9 — Multi-Tenant Org System
+PortKey is designed for brokerage firms, not just individual brokers. Multiple brokers can belong to the same organization, share shipments, and work collaboratively.
+
+Role	Permissions
+Org Admin	Full access: create/edit/delete shipments, manage users, see billing, configure settings
+Broker (Staff)	Create and manage their assigned shipments, upload documents, use AI tools
+Viewer	Read-only access to all org shipments — for management/oversight
+Client	Read-only access to their own shipments only via Client Portal
+
+4.6 Additional Production Features
+Feature 10 — Audit Log
+•	Every create, update, and delete action on a shipment is recorded
+•	Logs: who did it, what changed (old vs new value), when
+•	Viewable by Org Admin — useful for disputes, compliance reviews, and BOC audits
+
+Feature 11 — Duty Calculator (Standalone Tool)
+•	Quick calculator accessible from the sidebar without creating a shipment
+•	Input: Declared value, currency, HS Code, quantity
+•	Output: Customs Duty, VAT, Excise Tax (if applicable), Total estimated payable
+•	Useful for brokers quoting clients before the actual shipment arrives
+
+Feature 12 — Shipment Analytics & Reports
+•	Monthly summary: shipments processed, total duties paid, average clearance time
+•	Demurrage cost avoided (shows ROI of using PortKey)
+•	Most frequent HS Codes used by the organization
+•	Exportable to PDF or CSV for client billing or internal review
+
+Feature 13 — Mobile App (iOS & Android)
+•	Full shipment tracking and status updates on mobile
+•	Push notification delivery for demurrage alerts
+•	Mobile camera integration: photograph a physical document and trigger Smart-Scan
+•	Offline mode: view cached shipments when at port with poor connectivity
+•	Biometric login (Face ID / Fingerprint) via Clerk + Expo
+
+
+
+5. MoSCoW Feature Prioritization
+Features are prioritized using the MoSCoW framework to ensure the MVP is delivered fast without losing the core value proposition.
+
+MoSCoW Legend
+MUST = Non-negotiable for launch. SHOULD = High value, include if time allows. COULD = Nice to have, future sprint. WON'T = Out of scope for v1.0.
+
+Priority	Feature	Description	Phase
+MUST	Shipment CRUD	Create, view, edit, and delete shipments with all core fields	Phase 1
+MUST	Demurrage Clock	Auto-calculate doomsday date, color-coded urgency UI on dashboard	Phase 1
+MUST	Auth & Org Setup	Clerk authentication, multi-tenant orgs, role-based access (Admin/Broker/Client)	Phase 1
+MUST	Document Vault	Upload, store, and view documents per shipment (BL, CI, Packing List)	Phase 1
+MUST	Shipment Dashboard	Real-time list view with urgency sorting, stage filter, lane status badge	Phase 1
+MUST	Email Notifications	Demurrage alerts and stage change emails via Resend	Phase 1
+MUST	Smart-Scan OCR	PDF drag-and-drop auto-fill for the shipment entry form	Phase 2
+MUST	Compliance Copilot	AI HS Code prediction with duty rate and permit flag	Phase 2
+MUST	Shipment Entry Wizard	Step-by-step form with Smart-Scan + Copilot integration and draft saving	Phase 2
+MUST	Mobile App (Core)	React Native app with auth, shipment tracking, and push notifications	Phase 2
+SHOULD	Client Portal	Read-only importer view with stage updates and document access	Phase 3
+SHOULD	Push Notifications	Mobile demurrage alerts via Expo + Firebase FCM	Phase 3
+SHOULD	Audit Log UI	Viewable history of all changes per shipment for the Org Admin	Phase 3
+SHOULD	Duty Calculator Tool	Standalone tax estimator without creating a full shipment	Phase 3
+SHOULD	Shareable Doc Links	Time-expiry links to share documents with clients or BOC	Phase 3
+SHOULD	Lane Status Management	Broker updates lane manually; Yellow/Red triggers automatic escalation alerts	Phase 2
+SHOULD	Analytics Dashboard	Monthly reports on shipments processed, duties paid, demurrage savings	Phase 4
+COULD	SMS Alerts	Critical demurrage SMS via Twilio (costs money, use email as primary)	Future
+COULD	BOC e2m Integration	Direct lodgment API connection to BOC e2m portal (requires partnership)	Future
+COULD	Client Invoicing	Generate broker fee invoices from inside PortKey	Future
+COULD	Tariff Book Auto-Update	Scheduled re-ingestion of updated Philippine Tariff Commission PDFs	Future
+COULD	Team Chat / Comments	Per-shipment comment thread for broker team collaboration	Future
+COULD	Bulk Import (CSV)	Upload multiple shipments at once from a structured CSV file	Future
+COULD	Dark Mode	UI theme toggle for brokers working night shifts at port	Future
+WON'T	Customs Broker License Mgmt	Handling PRC / BOC licensing renewals — outside product scope	Out of Scope
+WON'T	Freight Booking	Booking cargo space on vessels — a separate logistics product	Out of Scope
+WON'T	Warehouse Management	Inventory tracking after cargo is released — separate system	Out of Scope
+WON'T	Multi-country Customs	Supporting customs rules outside the Philippines in v1	Out of Scope
+
+
+
+6. Tech Stack
+🎓 Student-Startup Philosophy
+Every technology choice below prioritizes free tier availability and zero upfront cost. The stack is designed to run at ₱0/month while you validate the product with real users, and scale only when revenue justifies it.
+
+6.1 Frontend — Web
+Technology	Purpose	Free Tier
+Next.js 14 (App Router)	Main web framework — SSR, routing, API Routes	Free (open source)
+TypeScript	Type-safe code across the entire project	Free (open source)
+Tailwind CSS	Utility-first styling — fast UI development	Free (open source)
+shadcn/ui	Unstyled component library built on Radix UI	Free (open source)
+React Hook Form + Zod	Performant forms with schema validation	Free (open source)
+TanStack Query v5	Server state, caching, background refetching	Free (open source)
+Recharts	Charts for analytics and duty estimator	Free (open source)
+Zustand	Lightweight global UI state management	Free (open source)
+React Dropzone	Drag-and-drop file upload zone (Smart-Scan)	Free (open source)
+
+6.2 Frontend — Mobile (iOS & Android)
+Technology	Purpose	Free Tier
+React Native (Expo SDK 51)	Cross-platform iOS + Android from one codebase	Free (open source + Expo free plan)
+Expo Router	File-based navigation — mirrors Next.js patterns	Free
+NativeWind	Tailwind CSS for React Native — consistent design	Free (open source)
+Expo Notifications	Push notifications via FCM and APNs	Free (up to 1M notifications/mo via FCM)
+Expo Camera	Mobile document scanning for Smart-Scan	Free
+Expo SecureStore	Store auth tokens securely on device	Free
+Expo EAS Build	Cloud builds for App Store & Play Store	Free tier: 30 builds/month
+
+6.3 Backend — API & Business Logic
+Technology	Purpose	Free Tier
+Spring Boot 3.x (Java)	Main REST API — shipment CRUD, business rules, cron jobs	Free (open source)
+Spring Security	JWT validation, role-based endpoint protection	Free (open source)
+Spring Data JPA / Hibernate	ORM for PostgreSQL via NeonDB	Free (open source)
+LangChain4j	Java AI framework for RAG pipeline (Compliance Copilot)	Free (open source)
+Spring Scheduler	Built-in cron jobs for daily demurrage checks	Free (built into Spring)
+Maven / Gradle	Build tool and dependency management	Free (open source)
+
+⚙️ Why Spring Boot?
+Spring Boot is enterprise-grade, battle-tested in financial and logistics systems, and has an excellent Java AI ecosystem (LangChain4j) for building the RAG-based Compliance Copilot. It is free and open source.
+
+6.4 Database
+Technology	Purpose	Free Tier
+NeonDB (PostgreSQL)	Primary database — all shipment, user, and org data	Free: 0.5GB storage, 1 branch, always-on
+pgvector extension	Vector embeddings for Compliance Copilot HS Code semantic search	Free (built into NeonDB)
+Prisma ORM (optional)	Type-safe DB client for Next.js API routes	Free (open source)
+
+6.5 Authentication
+Technology	Purpose	Free Tier
+Clerk	User auth, organization management, role-based access	Free: 10,000 MAU, orgs, MFA, social login
+Clerk Webhooks	Sync user and org events to Spring Boot database	Free (included)
+Clerk React SDK	Pre-built sign-in UI components for Next.js	Free (included)
+Clerk Expo SDK	Auth for React Native mobile app	Free (included)
+
+6.6 File Storage
+Technology	Purpose	Free Tier
+Supabase Storage	Store uploaded documents (BL, CI, Packing List, etc.)	Free: 1GB storage, 2GB bandwidth/month
+Supabase SDK	Client library for Next.js and Spring Boot file operations	Free (open source)
+
+6.7 AI & Machine Learning
+Technology	Purpose	Free Tier / Cost
+Google Gemini API	LLM for Compliance Copilot HS Code classification	Free tier: 15 requests/min, 1M tokens/day — Gemini 1.5 Flash
+OpenAI GPT-4o Mini (fallback)	Fallback LLM option for AI features	$0.15/1M input tokens — very cheap for low usage
+Google Cloud Document AI	OCR for Smart-Scan structured document extraction	Free: 1,000 pages/month (Enterprise Document Splitter)
+Tesseract OCR (open source)	Free fallback OCR option for Smart-Scan	Free — self-hosted, less accurate than Document AI
+pgvector + NeonDB	Vector similarity search for HS Code RAG database	Free (included in NeonDB free tier)
+LangChain4j	Java framework to connect Spring Boot to LLM + vector store	Free (open source)
+
+6.8 Email & Notifications
+Technology	Purpose	Free Tier
+Resend	Transactional email — demurrage alerts, stage notifications, welcome emails	Free: 3,000 emails/month, 1 custom domain
+React Email	Beautiful responsive email templates built with React components	Free (open source)
+Expo Notifications	Mobile push notifications for iOS and Android	Free (delivered via FCM/APNs)
+Firebase FCM	Google's push notification delivery infrastructure	Free (no limits on basic push)
+
+📧 Why Resend instead of SendGrid?
+Resend is developer-first, has a clean REST API, works seamlessly with React Email templates, and gives 3,000 free emails/month — more than enough for early users. SendGrid free tier is 100/day which is too low.
+
+6.9 Payments
+Technology	Purpose	Free Tier / Notes
+PayMongo	Philippine payment gateway — GCash, Maya, card payments	Free to register; 3.5% + ₱15 per transaction — no monthly fee
+Stripe (optional)	International cards if targeting brokers with foreign clients	Free to start; 2.9% + $0.30 per transaction — no monthly fee
+Stripe Billing	Subscription management for PortKey's own SaaS plans	Free to use; Stripe takes % of transactions only
+
+💳 Payment Recommendation
+Use PayMongo first — it supports GCash and Maya which are the dominant payment methods in the Philippines. Add Stripe later for international clients or if you want to offer card payments to enterprise accounts.
+
+6.10 Deployment & DevOps
+Technology	Purpose	Free Tier
+Vercel	Host Next.js web app — automatic deployments from GitHub	Free: unlimited personal projects, 100GB bandwidth/month
+Railway	Host Spring Boot API (Docker container)	Free: $5 credit/month — enough for a lightweight API
+Docker	Containerize Spring Boot for consistent deployments	Free (open source)
+GitHub Actions	CI/CD pipeline — run tests and auto-deploy on push to main	Free: 2,000 minutes/month for public repos
+GitHub	Version control and team collaboration	Free for public and private repos
+Expo EAS	Build and submit React Native app to App Store and Play Store	Free: 30 builds/month
+
+6.11 Monitoring & Analytics
+Technology	Purpose	Free Tier
+Sentry	Error tracking — catch crashes in production for web and mobile	Free: 5,000 errors/month, 10,000 performance events
+PostHog	Product analytics — track which features brokers use most	Free: 1M events/month (self-host option also free)
+Uptime Robot	Monitor API uptime and get alerted if service goes down	Free: 50 monitors, 5-minute intervals
+
+
+
+7. System Architecture
+7.1 High-Level Architecture
+PortKey follows a decoupled architecture with three primary layers: a Next.js frontend (web), a React Native mobile app, and a Spring Boot backend API — all sharing the same NeonDB PostgreSQL database.
+
+Layer	Technology	Responsibility
+Web Client	Next.js 14 → Vercel	Broker-facing UI, Client Portal, SSR pages, API Routes for lightweight operations
+Mobile Client	React Native (Expo) → EAS	Broker mobile app, push notifications, mobile document scanning
+Backend API	Spring Boot → Railway	Core business logic, auth validation, cron jobs, AI integrations
+AI Service	Spring Boot + LangChain4j	RAG pipeline for Compliance Copilot, OCR orchestration for Smart-Scan
+Database	NeonDB (PostgreSQL + pgvector)	All persistent data + vector embeddings for HS Code search
+File Storage	Supabase Storage	Shipment documents (BL, CI, Packing List, etc.)
+Auth Service	Clerk	User identity, org management, JWT issuance, webhooks to sync to DB
+Email Service	Resend	Transactional emails — alerts, stage changes, welcome
+Push Notifications	Expo FCM + Firebase	Mobile push alerts for demurrage and stage updates
+
+7.2 Data Flow — Smart-Scan
+1.	Broker uploads PDF via drag-and-drop in Next.js frontend
+2.	File is sent to Supabase Storage; a reference is stored in NeonDB
+3.	Next.js API Route calls Spring Boot OCR endpoint with the file URL
+4.	Spring Boot calls Google Document AI API; receives structured JSON response
+5.	Spring Boot NLP layer maps extracted fields to shipment form schema
+6.	Mapped data returned to Next.js; form fields are pre-populated with confidence scores
+7.	Broker reviews and clicks Verify & Save — shipment is created in DB
+
+7.3 Data Flow — Compliance Copilot
+8.	Broker types product description in the HS Code field
+9.	Next.js sends description to Spring Boot /api/copilot endpoint
+10.	LangChain4j converts description to vector embedding via OpenAI/Gemini embedding model
+11.	Vector is queried against pgvector HS Code database (cosine similarity search)
+12.	Top 5 candidate HS Code chunks are retrieved and sent to LLM with the original description
+13.	LLM returns top 3 HS Code matches ranked by confidence with duty rate and permit flags
+14.	Results displayed in frontend; broker selects and saves to shipment item
+
+7.4 Cron Job — Demurrage Daily Check
+15.	Spring Scheduler triggers at 8:00 AM daily (Philippine time: UTC+8)
+16.	Query NeonDB: SELECT all shipments WHERE status != RELEASED
+17.	For each shipment: compute days_elapsed = TODAY - arrival_date
+18.	If days_elapsed >= (free_days - 2): mark as WARNING, trigger email via Resend
+19.	If days_elapsed >= free_days: mark as CRITICAL, trigger email + push notification
+20.	If days_elapsed > free_days: compute running demurrage cost and update record
+21.	All transitions are logged to the AuditLog table
+
+
+
+8. Core Database Schema
+The following entities form the core domain model for PortKey in NeonDB (PostgreSQL).
+
+Entity	Key Fields	Relationships
+Organization	id, name, licenseNumber, plan (FREE/PRO/ENTERPRISE), createdAt	Has many Users, Shipments, Clients
+User	id, clerkId, email, name, role (ADMIN/BROKER/VIEWER), orgId	Belongs to Organization; can be assigned to Shipments
+Client	id, orgId, companyName, tinNumber, contactEmail, contactPhone	Belongs to Organization; has many Shipments
+Shipment	id, orgId, clientId, status, vesselName, voyageNo, portOfDischarge, arrivalDate, freeTimeDays, doomsdayDate, blNumber, entryNumber, laneStatus, assignedBrokerId	Belongs to Org + Client; has many Items, Documents, AuditLogs
+ShipmentItem	id, shipmentId, description, quantity, unit, unitValue, currency, hsCode, dutyRate, vatRate, estimatedDuty, aiConfidenceScore, isVerified	Belongs to Shipment
+Document	id, shipmentId, type (BL/CI/PL/PERMIT/OTHER), fileUrl, fileName, uploadedBy, ocrStatus, ocrExtractedData (JSONB)	Belongs to Shipment
+DemurrageLog	id, shipmentId, date, chargeAmount, cumulativeTotal, notes	Belongs to Shipment
+AuditLog	id, shipmentId, userId, action, entityType, oldValue (JSONB), newValue (JSONB), timestamp	Belongs to Shipment + User
+HsCodeEmbedding	id, hsCode, description, dutyRate, vatRate, permitRequired, embedding (vector)	Standalone — queried by Compliance Copilot RAG
+Notification	id, userId, type, title, body, isRead, shipmentId, createdAt	Belongs to User + Shipment
+
+
+
+9. Development Roadmap
+A 16-week delivery plan organized into 4 phases. Phase 1 delivers a working product without AI so real broker feedback can be collected early.
+
+Phase 0 — Foundation (Week 1–2)
+•	Monorepo setup: /apps/web, /apps/mobile, /apps/api, /packages/shared-types
+•	NeonDB provisioned; Prisma schema migrations run
+•	Clerk configured: organizations, roles, webhooks to Spring Boot
+•	Supabase Storage bucket created with access policies
+•	GitHub Actions CI/CD: lint + test + deploy to Vercel (web) and Railway (API)
+•	Figma design system: color tokens, typography, core components
+
+Phase 1 — Core MVP: No AI (Week 3–7)
+•	Shipment CRUD with full lifecycle status management
+•	Demurrage Doomsday Clock — calculation logic, dashboard urgency UI
+•	Document Vault — upload, list, preview, version history
+•	Dashboard — shipment list, filters, lane status, quick actions
+•	Email notifications via Resend — demurrage warning and stage change
+•	Basic audit log — backend only (no UI yet)
+•	React Native app shell — auth, navigation, shipment list, push notification setup
+•	→ Milestone: Demo to 3 real brokers. Collect feedback before building AI.
+
+Phase 2 — AI Features (Week 8–12)
+•	Smart-Scan: PDF upload → Google Document AI → form pre-fill with confidence scores
+•	Compliance Copilot: product description → Gemini + pgvector RAG → HS Code suggestions
+•	Build and ingest Philippine Tariff Book into pgvector (HsCodeEmbedding table)
+•	Duty and VAT auto-calculator integrated into shipment item form
+•	Mobile Smart-Scan: camera capture → OCR → mobile form pre-fill
+•	→ Milestone: AI features in production with real broker testing.
+
+Phase 3 — Client Portal & Notifications (Week 13–14)
+•	Client Portal — read-only importer view, stage timeline, document download
+•	Push notifications (mobile) for demurrage alerts and stage changes
+•	Shareable document links with expiry
+•	Audit log UI for Org Admin
+•	Standalone Duty Calculator tool
+
+Phase 4 — Polish & Launch (Week 15–16)
+•	Onboarding flow — org setup wizard, first shipment walkthrough, welcome email
+•	Analytics dashboard — monthly report, demurrage saved, HS Code frequency
+•	PayMongo integration — subscription billing for Pro plan
+•	App Store and Google Play submission via Expo EAS
+•	Beta program with 5–10 real brokers
+•	Sentry + PostHog monitoring live in production
+•	Performance and security review — rate limiting, RLS policies audit
+
+
+
+10. Risks & Mitigations
+Risk	Impact	Likelihood	Mitigation
+BOC tariff regulation changes	Compliance Copilot returns stale HS Codes	Medium	Build admin tool to re-ingest updated tariff PDFs; version the vector database
+OCR accuracy on poor-quality scans	Brokers lose trust in Smart-Scan	High	Always show confidence scores; manual override is always the primary path, never blocked
+Demurrage miscalculation	Broker liable for financial losses	Low	Free days are configurable per shipment; display the full calculation formula visibly in UI
+NeonDB free tier storage limit	App stops working at 0.5GB	Medium	Archive old shipments to cold storage; upgrade to paid plan when first revenue arrives
+Gemini / OpenAI API rate limits	AI features slow down or fail	Medium	Implement request queuing, caching of common HS Code lookups, and graceful degradation UI
+Multi-tenancy data leak	Catastrophic — clients see each other's shipments	Low	Row-Level Security on NeonDB + Spring Security org-scoped queries on every endpoint
+App Store rejection	Delays iOS launch	Low	Follow Apple HIG guidelines from day 1; no background data scraping from BOC
+Student time constraints	Delayed delivery	High	Strict MVP scope (MoSCoW); Phase 1 has zero AI dependencies so it ships fast
+
+11. Business Model
+PortKey is a B2B SaaS product targeting licensed customs brokerage firms in the Philippines. Pricing is in Philippine Pesos to match the local market.
+
+Plan	Price	Active Shipments	Users	AI Features	Client Portal
+Starter	Free	10	1 broker	No	No
+Pro	₱2,500/month	Unlimited	Up to 5	Smart-Scan + Copilot (100 uses/mo)	Yes
+Business	₱6,000/month	Unlimited	Up to 15	Unlimited AI uses	Yes + Custom branding
+Enterprise	Custom	Unlimited	Unlimited	Unlimited + API access	Yes + SLA + Onboarding
+
+Key Metric to Track: Demurrage fees avoided per user per month. This is the ROI story — if PortKey prevents even one demurrage event per month (₱3,000 saved), the Pro plan pays for itself.
+
+
+
+12. Glossary
+Term	Definition
+BOC	Bureau of Customs of the Philippines — the government agency that regulates all imports and exports
+Bill of Lading (BL)	Legal document issued by a carrier confirming receipt of cargo for shipment
+Commercial Invoice	Seller's official bill to the buyer; used by BOC to determine the taxable value of goods
+Packing List	Itemized document listing all contents of a shipment with weights and dimensions
+HS Code	Harmonized System Code — a 6–10 digit international classification code for every imported product
+Demurrage	Daily fee charged by the port authority when a container is not picked up after the free storage period
+Free Days	The number of days a container may sit at the port at no charge, typically 5–7 days
+Lane	BOC risk assessment result: Green (auto-release), Yellow (document check), Red (physical examination)
+Lodgment	The formal filing of an import entry with the BOC declaring goods, quantities, and estimated duties
+Entry Number	BOC-assigned reference number issued upon acceptance of the lodged import entry
+Gate Pass	Document issued by the port authority authorizing a truck to collect a specific container
+OR Number	Official Receipt number issued by the bank confirming payment of customs duties and taxes
+AHTN	ASEAN Harmonized Tariff Nomenclature — the tariff code book used in the Philippines
+RAG	Retrieval-Augmented Generation — AI technique that combines a vector database search with an LLM to answer questions from a custom knowledge base
+OCR	Optical Character Recognition — technology that reads and extracts text from images and PDFs
+pgvector	PostgreSQL extension that enables storing and querying vector embeddings for AI similarity search
+MoSCoW	Product prioritization framework: Must Have, Should Have, Could Have, Won't Have (this version)
+FCM	Firebase Cloud Messaging — Google's cross-platform push notification delivery service
+NeonDB	Serverless PostgreSQL database with a generous free tier, used as PortKey's primary database
+
+Document Notes
+This document serves as the master Product Requirements Document (PRD) and Technical Specification for PortKey v1.0. It should be updated as the product evolves based on broker feedback and BOC regulatory changes.
+
+Prepared for: Student Startup Development Planning
+Stack Philosophy: Free tier first. Ship fast. Scale when users arrive.

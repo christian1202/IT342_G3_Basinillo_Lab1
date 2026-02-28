@@ -1,6 +1,7 @@
 package com.it342.basinillo.repository;
 
 import com.it342.basinillo.entity.Shipment;
+import com.it342.basinillo.entity.ShipmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,26 +12,33 @@ import java.util.UUID;
 /**
  * Spring Data JPA repository for the Shipment entity.
  *
- * Provides standard CRUD operations plus custom queries
- * for user-scoped and Bill of Lading lookups.
+ * All list queries are org-scoped for multi-tenant security.
  */
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, UUID> {
 
     /**
-     * Find all shipments belonging to a specific user, newest first.
-     * Ensures clients only see their own cargo.
-     *
-     * @param userId the UUID of the shipment owner
-     * @return list of shipments ordered by creation date descending
+     * Find all shipments for an organization, newest first.
      */
-    List<Shipment> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    List<Shipment> findByOrgIdOrderByCreatedAtDesc(UUID orgId);
+
+    /**
+     * Find all shipments assigned to a specific broker, newest first.
+     */
+    List<Shipment> findByAssignedBrokerIdOrderByCreatedAtDesc(UUID brokerId);
 
     /**
      * Find a shipment by its Bill of Lading number.
-     *
-     * @param blNumber the Bill of Lading identifier
-     * @return an Optional containing the shipment if found
      */
     Optional<Shipment> findByBlNumber(String blNumber);
+
+    /**
+     * Find all shipments that are not yet released (for demurrage cron job).
+     */
+    List<Shipment> findByStatusNot(ShipmentStatus status);
+
+    /**
+     * Find all shipments for an org filtered by status.
+     */
+    List<Shipment> findByOrgIdAndStatus(UUID orgId, ShipmentStatus status);
 }
