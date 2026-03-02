@@ -47,3 +47,44 @@ export const useApi = () => {
 
   return { fetchApi };
 };
+
+export interface BackendUser {
+  id: string;
+  clerkId: string;
+  email: string;
+  name: string;
+  avatarUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClerkSyncPayload {
+  clerkId: string;
+  email: string;
+  fullName: string;
+  avatarUrl: string;
+}
+
+export async function syncClerkUser(
+  payload: ClerkSyncPayload,
+): Promise<BackendUser> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const url = `${baseUrl}/api/users/sync`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(
+      errorData?.message || `API request failed with status ${response.status}`,
+    );
+  }
+
+  return response.json();
+}
