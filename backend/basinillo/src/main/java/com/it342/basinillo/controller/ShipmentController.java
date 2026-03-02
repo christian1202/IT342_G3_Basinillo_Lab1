@@ -77,8 +77,12 @@ public class ShipmentController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
 
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            // Return 400 Bad Request with the actual domain validation message
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            // Return 500 Internal Server Error for unhandled bugs
+            return ResponseEntity.internalServerError().body(Map.of("error", "An unexpected server error occurred: " + e.getMessage()));
         }
     }
 

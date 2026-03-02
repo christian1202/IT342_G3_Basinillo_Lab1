@@ -4,7 +4,15 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Ship, Tag, Navigation, Package, Calendar } from "lucide-react";
+import {
+  Ship,
+  Tag,
+  Navigation,
+  Package,
+  Calendar,
+  User,
+  Receipt,
+} from "lucide-react";
 
 import { createShipment, updateShipment } from "@/services/shipmentService";
 import type {
@@ -47,8 +55,17 @@ const shipmentSchema = z.object({
       "CUSTOMS_HOLD",
       "RELEASED",
       "DELIVERED",
+      "DELAYED",
+      "CANCELLED",
     ] as const)
     .optional(),
+
+  service_fee: z.coerce.number().min(0, "Service fee must be valid").optional(),
+  client_name: z
+    .string()
+    .max(150, "Client name must be 150 characters or fewer")
+    .optional()
+    .or(z.literal("")),
 });
 
 type ShipmentFormValues = z.infer<typeof shipmentSchema>;
@@ -64,6 +81,8 @@ const STATUS_OPTIONS: { value: ShipmentStatus; label: string }[] = [
   { value: "CUSTOMS_HOLD", label: "Customs Hold" },
   { value: "RELEASED", label: "Released" },
   { value: "DELIVERED", label: "Delivered" },
+  { value: "DELAYED", label: "Delayed" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 /* ================================================================== */
@@ -136,6 +155,8 @@ export default function ShipmentForm({
       container_number: "",
       arrival_date: "",
       status: "PENDING",
+      service_fee: 0,
+      client_name: "",
     },
   });
 
@@ -150,6 +171,8 @@ export default function ShipmentForm({
           ? new Date(initialData.arrival_date).toISOString().slice(0, 16) // format for datetime-local
           : "",
         status: initialData.status,
+        service_fee: initialData.service_fee || 0,
+        client_name: initialData.client_name || "",
       });
     } else {
       reset({
@@ -158,6 +181,8 @@ export default function ShipmentForm({
         container_number: "",
         arrival_date: "",
         status: "PENDING",
+        service_fee: 0,
+        client_name: "",
       });
     }
   }, [initialData, reset]);
@@ -184,6 +209,8 @@ export default function ShipmentForm({
           vessel_name: values.vessel_name || undefined,
           container_number: values.container_number || undefined,
           arrival_date: values.arrival_date || undefined,
+          service_fee: values.service_fee,
+          client_name: values.client_name || undefined,
         });
       }
 
@@ -252,6 +279,27 @@ export default function ShipmentForm({
         error={errors.arrival_date?.message}
         {...register("arrival_date")}
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Service Fee */}
+        <Input
+          label="Service Fee"
+          type="number"
+          step="0.01"
+          icon={Receipt}
+          error={errors.service_fee?.message}
+          {...register("service_fee")}
+        />
+
+        {/* Client Name */}
+        <Input
+          label="Client Name"
+          placeholder="e.g. Toyota Motor"
+          icon={User}
+          error={errors.client_name?.message}
+          {...register("client_name")}
+        />
+      </div>
 
       {/* Status (Only visible in Edit Mode) */}
       {isEditMode && (

@@ -3,6 +3,7 @@ package com.it342.basinillo.service;
 import com.it342.basinillo.dto.UserSyncDTO;
 import com.it342.basinillo.entity.User;
 import com.it342.basinillo.entity.UserRole;
+import com.it342.basinillo.repository.OrganizationRepository;
 import com.it342.basinillo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final OrganizationRepository organizationRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, OrganizationRepository organizationRepository) {
         this.userRepository = userRepository;
+        this.organizationRepository = organizationRepository;
     }
 
     /**
@@ -50,6 +53,9 @@ public class UserService {
             if (user.getClerkId() == null) {
                 user.setClerkId(request.getClerkId());
             }
+            if (user.getOrganization() == null) {
+                user.setOrganization(organizationRepository.findAll().stream().findFirst().orElse(null));
+            }
         } else {
             // INSERT: new user
             user = User.builder()
@@ -58,6 +64,7 @@ public class UserService {
                     .fullName(request.getFullName())
                     .avatarUrl(request.getAvatarUrl())
                     .role(UserRole.CLIENT)
+                    .organization(organizationRepository.findAll().stream().findFirst().orElse(null))
                     .build();
         }
 
