@@ -67,8 +67,13 @@ public class ShipmentController {
                     ? LocalDateTime.parse(payload.get("arrivalDate"))
                     : null;
 
+            String clientName       = payload.get("clientName");
+            java.math.BigDecimal serviceFee = payload.containsKey("serviceFee") && payload.get("serviceFee") != null
+                    ? new java.math.BigDecimal(payload.get("serviceFee").toString())
+                    : null;
+
             Shipment created = shipmentService.createShipment(
-                    brokerId, blNumber, vesselName, containerNumber, arrivalDate);
+                    brokerId, blNumber, vesselName, containerNumber, arrivalDate, serviceFee, clientName);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
 

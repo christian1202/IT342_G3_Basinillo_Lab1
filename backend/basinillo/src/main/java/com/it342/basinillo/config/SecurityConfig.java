@@ -33,7 +33,7 @@ public class SecurityConfig {
                         // Allow the dashboard status endpoint without authentication
                         .requestMatchers("/api/dashboard/**").permitAll()
                         // Allow shipment endpoints (development access)
-                        .requestMatchers("/api/shipments/**").permitAll()
+                        .requestMatchers("/api/shipments", "/api/shipments/**").permitAll()
                         // All other endpoints require authentication
                         .anyRequest().authenticated());
 

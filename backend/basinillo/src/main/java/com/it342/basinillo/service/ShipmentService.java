@@ -11,6 +11,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,7 +56,9 @@ public class ShipmentService {
                                    String blNumber,
                                    String vesselName,
                                    String containerNumber,
-                                   LocalDateTime arrivalDate) {
+                                   LocalDateTime arrivalDate,
+                                   BigDecimal serviceFee,
+                                   String clientName) {
 
         User broker = userRepository.findById(brokerId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + brokerId));
@@ -84,7 +87,9 @@ public class ShipmentService {
                 .containerNumber(containerNumber)
                 .arrivalDate(arrivalDate)
                 .doomsdayDate(doomsdayDate)
-                .status(ShipmentStatus.ARRIVED)
+                .status(ShipmentStatus.ARRIVED) // backend starts at ARRIVED
+                .serviceFee(serviceFee)
+                .clientName(clientName)
                 .build();
 
         return shipmentRepository.save(shipment);

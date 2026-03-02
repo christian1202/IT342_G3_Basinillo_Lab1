@@ -18,12 +18,15 @@ const TABLE = "shipments";
 /*  CREATE                                                             */
 /* ------------------------------------------------------------------ */
 
+const BACKEND_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+).replace(/\/$/, "");
+
 /**
- * Inserts a new shipment row into the database.
+ * Creates a new shipment via the Spring Boot backend REST API.
  *
- * The caller provides the owner's user_id, BL number, and optional
- * details. Server-managed fields (id, status, created_at) are
- * generated automatically by Supabase/PostgreSQL.
+ * This bypasses Supabase directly to allow the backend to handle
+ * ownership, tenant assignment (organization), and 5-stage defaults.
  *
  * @param payload - The shipment fields to insert
  * @returns A result containing the created shipment or an error message
@@ -31,17 +34,37 @@ const TABLE = "shipments";
 export async function createShipment(
   payload: ICreateShipmentPayload,
 ): Promise<IServiceResult<IShipment>> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .insert(payload)
-    .select()
-    .single();
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/shipments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        brokerId: payload.user_id,
+        blNumber: payload.bl_number,
+        vesselName: payload.vessel_name,
+        containerNumber: payload.container_number,
+        arrivalDate: payload.arrival_date,
+        serviceFee: payload.service_fee,
+        clientName: payload.client_name,
+      }),
+    });
 
-  if (error) {
-    return { data: null, error: error.message };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        data: null,
+        error: errorData.error || `Backend error: ${response.status}`,
+      };
+    }
+
+    const data = await response.json();
+    return { data: data as IShipment, error: null };
+  } catch (err: unknown) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
   }
-
-  return { data: data as IShipment, error: null };
 }
 
 /* ------------------------------------------------------------------ */
