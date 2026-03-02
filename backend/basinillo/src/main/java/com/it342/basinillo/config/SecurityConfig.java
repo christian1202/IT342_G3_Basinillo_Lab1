@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 /**
  * Spring Security configuration.
  *
@@ -18,7 +20,14 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // Allows @PreAuthorize on controller methods
 public class SecurityConfig {
+
+    private final ClerkJwtAuthenticationConverter jwtAuthConverter;
+
+    public SecurityConfig(ClerkJwtAuthenticationConverter jwtAuthConverter) {
+        this.jwtAuthConverter = jwtAuthConverter;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -40,13 +49,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/dashboard/**").permitAll()
                         // Seed endpoint (development only)
                         .requestMatchers("/api/seed/**").permitAll()
-                        // Shipments, documents — require authentication
-                        .requestMatchers("/api/shipments", "/api/shipments/**").permitAll()
-                        .requestMatchers("/api/documents", "/api/documents/**").permitAll()
                         // Everything else requires a valid JWT
                         .anyRequest().authenticated())
-                // Enable JWT-based OAuth2 resource server
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                // Enable JWT-based OAuth2 resource server with Custom Role Converter
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(
+                        jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter)
+                ));
 
         return http.build();
     }

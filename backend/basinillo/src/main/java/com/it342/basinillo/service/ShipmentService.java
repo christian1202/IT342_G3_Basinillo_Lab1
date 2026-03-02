@@ -1,5 +1,6 @@
 package com.it342.basinillo.service;
 
+import com.it342.basinillo.dto.ShipmentRequest;
 import com.it342.basinillo.dto.UpdateStatusRequest;
 import com.it342.basinillo.entity.Organization;
 import com.it342.basinillo.entity.Shipment;
@@ -11,9 +12,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,47 +51,99 @@ public class ShipmentService {
      * @return the persisted Shipment entity
      */
     @Transactional
-    public Shipment createShipment(@NonNull UUID brokerId,
-                                   String blNumber,
-                                   String vesselName,
-                                   String containerNumber,
-                                   LocalDateTime arrivalDate,
-                                   BigDecimal serviceFee,
-                                   String clientName) {
+    public Shipment createShipment(@NonNull ShipmentRequest request) {
 
-        User broker = userRepository.findById(brokerId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + brokerId));
+        @NonNull User broker = userRepository.findById(request.getBrokerId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getBrokerId()));
 
         Organization org = broker.getOrganization();
         if (org == null) {
             throw new IllegalStateException("User is not assigned to any organization.");
         }
 
-        if (shipmentRepository.findByBlNumber(blNumber).isPresent()) {
+        if (shipmentRepository.findByBlNumber(request.getBlNumber()).isPresent()) {
             throw new IllegalArgumentException(
-                    "A shipment with BL number '" + blNumber + "' already exists.");
+                    "A shipment with BL number '" + request.getBlNumber() + "' already exists.");
         }
 
         // Compute doomsday date if arrival date is provided
         LocalDate doomsdayDate = null;
-        if (arrivalDate != null) {
-            doomsdayDate = arrivalDate.toLocalDate().plusDays(7);
+        if (request.getArrivalDate() != null && request.getFreeTimeDays() != null) {
+            doomsdayDate = request.getArrivalDate().toLocalDate().plusDays(request.getFreeTimeDays());
         }
 
         Shipment shipment = Shipment.builder()
                 .organization(org)
                 .assignedBroker(broker)
-                .blNumber(blNumber)
-                .vesselName(vesselName)
-                .containerNumber(containerNumber)
-                .arrivalDate(arrivalDate)
+                .blNumber(request.getBlNumber())
+                .vesselName(request.getVesselName())
+                .voyageNo(request.getVoyageNo())
+                .containerNumber(request.getContainerNumber())
+                .portOfDischarge(request.getPortOfDischarge())
+                .arrivalDate(request.getArrivalDate())
+                .freeTimeDays(request.getFreeTimeDays() != null ? request.getFreeTimeDays() : 7)
                 .doomsdayDate(doomsdayDate)
-                .status(ShipmentStatus.ARRIVED) // backend starts at ARRIVED
-                .serviceFee(serviceFee)
-                .clientName(clientName)
+                .status(ShipmentStatus.ARRIVED)
+                .serviceFee(request.getServiceFee())
+                .clientName(request.getClientName())
+                // TODO: set client if clientId is provided
                 .build();
 
         return shipmentRepository.save(shipment);
+    }
+
+    /* ================================================================== */
+    /*  UPDATE                                                             */
+    /* ================================================================== */
+
+    @Transactional
+    public Shipment updateShipment(@NonNull UUID shipmentId, @NonNull ShipmentRequest request) {
+        @NonNull Shipment shipment = findShipmentById(shipmentId);
+
+        shipment.setBlNumber(request.getBlNumber());
+        shipment.setVesselName(request.getVesselName());
+        shipment.setVoyageNo(request.getVoyageNo());
+        shipment.setContainerNumber(request.getContainerNumber());
+        shipment.setPortOfDischarge(request.getPortOfDischarge());
+        shipment.setArrivalDate(request.getArrivalDate());
+        shipment.setFreeTimeDays(request.getFreeTimeDays() != null ? request.getFreeTimeDays() : 7);
+        shipment.setServiceFee(request.getServiceFee());
+        shipment.setClientName(request.getClientName());
+
+        if (request.getArrivalDate() != null && request.getFreeTimeDays() != null) {
+            shipment.setDoomsdayDate(request.getArrivalDate().toLocalDate().plusDays(request.getFreeTimeDays()));
+        }
+
+        if (request.getBrokerId() != null && !request.getBrokerId().equals(shipment.getAssignedBroker().getId())) {
+             @NonNull User broker = userRepository.findById(request.getBrokerId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getBrokerId()));
+             shipment.setAssignedBroker(broker);
+        }
+
+        return shipmentRepository.save(shipment);
+    }
+
+    /**
+     * Updates the lifecycle status of a shipment.
+     */
+    @Transactional
+    public Shipment updateStatus(@NonNull UUID shipmentId,
+                                 @NonNull UpdateStatusRequest request) {
+
+        @NonNull Shipment shipment = findShipmentById(shipmentId);
+        shipment.setStatus(request.getStatus());
+
+        return shipmentRepository.save(shipment);
+    }
+
+    /* ================================================================== */
+    /*  DELETE                                                             */
+    /* ================================================================== */
+
+    @Transactional
+    public void deleteShipment(@NonNull UUID shipmentId) {
+        @NonNull Shipment shipment = findShipmentById(shipmentId);
+        shipmentRepository.delete(shipment);
     }
 
     /* ================================================================== */
@@ -121,23 +172,6 @@ public class ShipmentService {
     /*  UPDATE                                                             */
     /* ================================================================== */
 
-    /**
-     * Updates the lifecycle status of a shipment.
-     */
-    @Transactional
-    public Shipment updateStatus(@NonNull UUID shipmentId,
-                                 @NonNull UpdateStatusRequest request) {
-
-        Shipment shipment = findShipmentById(shipmentId);
-        shipment.setStatus(request.getStatus());
-
-        return shipmentRepository.save(shipment);
-    }
-
-    /**
-     * Retrieves shipments based on the user's role.
-     * ADMIN: all org shipments. BROKER: their assigned shipments.
-     */
     @Transactional(readOnly = true)
     public List<Shipment> getShipmentsForUser(String email,
                                               java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> authorities) {

@@ -1,17 +1,19 @@
 package com.it342.basinillo.controller;
 
+import com.it342.basinillo.dto.ShipmentRequest;
+import com.it342.basinillo.dto.ShipmentResponse;
 import com.it342.basinillo.dto.UpdateStatusRequest;
 import com.it342.basinillo.entity.Shipment;
 import com.it342.basinillo.service.ShipmentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * REST Controller for Shipment management endpoints.
@@ -26,9 +28,6 @@ public class ShipmentController {
 
     private final ShipmentService shipmentService;
 
-    /**
-     * Constructor Injection — Spring auto-injects the ShipmentService bean.
-     */
     public ShipmentController(ShipmentService shipmentService) {
         this.shipmentService = shipmentService;
     }
@@ -37,74 +36,27 @@ public class ShipmentController {
     /*  POST /api/shipments — Create a new shipment                        */
     /* ================================================================== */
 
-    /**
-     * Creates a new shipment.
-     *
-     * Expects a JSON body with the following fields:
-     * {
-     *   "brokerId":        "uuid-string",
-     *   "blNumber":        "BL-2026-001",
-     *   "vesselName":      "MV Ever Given",
-     *   "containerNumber": "MSKU1234567",
-     *   "arrivalDate":     "2026-03-15T08:00:00"
-     * }
-     *
-     * @param payload the request body as a map
-     * @return 201 Created with the persisted Shipment, or 400 Bad Request on validation failure
-     */
     @PostMapping
-    @SuppressWarnings("null")
-    public ResponseEntity<?> createShipment(@RequestBody Map<String, String> payload) {
-
-        try {
-            String brokerIdStr = payload.get("brokerId");
-            if (brokerIdStr == null) throw new IllegalArgumentException("brokerId is required");
-            UUID brokerId = UUID.fromString(brokerIdStr);
-            String blNumber         = payload.get("blNumber");
-            String vesselName       = payload.get("vesselName");
-            String containerNumber  = payload.get("containerNumber");
-            LocalDateTime arrivalDate = payload.containsKey("arrivalDate")
-                    ? LocalDateTime.parse(payload.get("arrivalDate"))
-                    : null;
-
-            String clientName       = payload.get("clientName");
-            java.math.BigDecimal serviceFee = payload.containsKey("serviceFee") && payload.get("serviceFee") != null
-                    ? new java.math.BigDecimal(payload.get("serviceFee").toString())
-                    : null;
-
-            Shipment created = shipmentService.createShipment(
-                    brokerId, blNumber, vesselName, containerNumber, arrivalDate, serviceFee, clientName);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
-
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            // Return 400 Bad Request with the actual domain validation message
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // Return 500 Internal Server Error for unhandled bugs
-            return ResponseEntity.internalServerError().body(Map.of("error", "An unexpected server error occurred: " + e.getMessage()));
-        }
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_BROKER')")
+    public ResponseEntity<ShipmentResponse> createShipment(@Valid @RequestBody ShipmentRequest request) {
+        Shipment created = shipmentService.createShipment(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ShipmentResponse.fromEntity(created));
     }
 
     /* ================================================================== */
     /*  GET /api/shipments — List shipments (RBAC Protected)               */
     /* ================================================================== */
 
-    /**
-     * Retrieves shipments based on the authenticated user's role.
-     * <p>
-     * - ADMIN: Returns ALL shipments.
-     * - USER: Returns ONLY their owned shipments.
-     *
-     * @param authentication the Spring Security principal (injected automatically)
-     * @return 200 OK with the list of accessible shipments
-     */
     @GetMapping
-    public ResponseEntity<List<Shipment>> getShipments(org.springframework.security.core.Authentication authentication) {
+    public ResponseEntity<List<ShipmentResponse>> getShipments(org.springframework.security.core.Authentication authentication) {
         String email = authentication.getName();
         var authorities = authentication.getAuthorities();
 
-        List<Shipment> shipments = shipmentService.getShipmentsForUser(email, authorities);
+        List<ShipmentResponse> shipments = shipmentService.getShipmentsForUser(email, authorities)
+                .stream()
+                .map(ShipmentResponse::fromEntity)
+                .collect(Collectors.toList());
+
         return ResponseEntity.ok(shipments);
     }
 
@@ -112,58 +64,48 @@ public class ShipmentController {
     /*  GET /api/shipments/{id} — Get a single shipment                    */
     /* ================================================================== */
 
-    /**
-     * Returns a single shipment by its database ID.
-     *
-     * @param shipmentId the UUID of the shipment
-     * @return 200 OK with the Shipment, or 404 Not Found
-     */
     @GetMapping("/{id}")
-    @SuppressWarnings("null")
-    public ResponseEntity<?> getShipmentById(@PathVariable("id") UUID shipmentId) {
+    public ResponseEntity<ShipmentResponse> getShipmentById(@PathVariable("id") UUID shipmentId) {
+        Shipment shipment = shipmentService.findShipmentById(shipmentId);
+        return ResponseEntity.ok(ShipmentResponse.fromEntity(shipment));
+    }
 
-        try {
-            Shipment shipment = shipmentService.findShipmentById(shipmentId);
-            return ResponseEntity.ok(shipment);
+    /* ================================================================== */
+    /*  PUT /api/shipments/{id} — Full update                              */
+    /* ================================================================== */
 
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
-        }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_BROKER')")
+    public ResponseEntity<ShipmentResponse> updateShipment(
+            @PathVariable("id") UUID shipmentId,
+            @Valid @RequestBody ShipmentRequest request) {
+
+        Shipment updated = shipmentService.updateShipment(shipmentId, request);
+        return ResponseEntity.ok(ShipmentResponse.fromEntity(updated));
     }
 
     /* ================================================================== */
     /*  PATCH /api/shipments/{id}/status — Update shipment status          */
     /* ================================================================== */
 
-    /**
-     * Updates the lifecycle status of a shipment.
-     *
-     * Consumes:
-     *   - Step 1: {@link UpdateStatusRequest} DTO (validated with @Valid)
-     *   - Step 2: {@link ShipmentService#updateStatus} (business logic)
-     *
-     * Example request:
-     *   PATCH /api/shipments/550e8400-e29b-41d4-a716-446655440000/status
-     *   Body: { "status": "IN_TRANSIT" }
-     *
-     * @param shipmentId the UUID of the shipment to update
-     * @param request    the validated DTO containing the new status
-     * @return 200 OK with the updated Shipment, or 404 Not Found
-     */
     @PatchMapping("/{id}/status")
-    @SuppressWarnings("null")
-    public ResponseEntity<?> updateShipmentStatus(
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_BROKER')")
+    public ResponseEntity<ShipmentResponse> updateShipmentStatus(
             @PathVariable("id") UUID shipmentId,
             @Valid @RequestBody UpdateStatusRequest request) {
 
-        try {
-            Shipment updated = shipmentService.updateStatus(shipmentId, request);
-            return ResponseEntity.ok(updated);
+        Shipment updated = shipmentService.updateStatus(shipmentId, request);
+        return ResponseEntity.ok(ShipmentResponse.fromEntity(updated));
+    }
 
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
-        }
+    /* ================================================================== */
+    /*  DELETE /api/shipments/{id} — Delete a shipment                     */
+    /* ================================================================== */
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')") // Only admins can completely delete shipments
+    public ResponseEntity<Void> deleteShipment(@PathVariable("id") UUID shipmentId) {
+        shipmentService.deleteShipment(shipmentId);
+        return ResponseEntity.noContent().build();
     }
 }
