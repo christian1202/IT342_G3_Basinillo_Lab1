@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createClient } from "@/lib/supabase";
+import { useUser } from "@clerk/nextjs";
+import { supabase } from "@/lib/supabase";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -33,7 +34,7 @@ export function CreateShipmentModal() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const { user } = useUser();
 
   const {
     register,
@@ -50,10 +51,6 @@ export function CreateShipmentModal() {
   async function onSubmit(data: ShipmentFormValues) {
     setLoading(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
       if (!user) throw new Error("No user found");
 
       const { error } = await supabase.from("shipments").insert({

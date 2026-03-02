@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { IUserProfile } from "@/types/database";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { Loader2, ShieldCheck, Ban } from "lucide-react";
 
 interface StaffTableProps {
@@ -12,7 +12,6 @@ interface StaffTableProps {
 
 export function StaffTable({ users, onRefresh }: StaffTableProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const supabase = createClient();
 
   async function promoteUser(id: string) {
     if (!confirm("Promote user to Admin?")) return;

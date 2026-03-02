@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import {
   BarChart,
   Bar,
@@ -34,7 +34,6 @@ interface Shipment {
 export default function AdminDashboard() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchData() {
@@ -52,7 +51,7 @@ export default function AdminDashboard() {
     }
 
     fetchData();
-  }, [supabase]);
+  }, []);
 
   // --- KPI Calculations ---
   const totalRevenue = shipments.reduce(
