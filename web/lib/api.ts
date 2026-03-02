@@ -1,39 +1,43 @@
-import { Session } from "@supabase/supabase-js";
+/* ================================================================== */
+/*  Backend API Client                                                 */
+/*  Centralised functions for calling the Spring Boot backend.         */
+/* ================================================================== */
 
 const BACKEND_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 ).replace(/\/$/, "");
 
+/* ------------------------------------------------------------------ */
+/*  User Sync                                                          */
+/* ------------------------------------------------------------------ */
+
 /**
- * Syncs the authenticated Supabase user with the Spring Boot backend.
+ * Shape of the Clerk user data we send to the backend.
+ * Mirrors the backend's UserSyncDTO.
+ */
+interface ClerkUserPayload {
+  clerkId: string;
+  email: string;
+  fullName: string;
+  avatarUrl: string;
+}
+
+/**
+ * Syncs the authenticated Clerk user with the Spring Boot backend.
  *
- * Sends a POST to /api/users/sync with the user's UUID, email, full name,
- * and avatar URL — matching the backend's UserSyncDTO shape.
+ * Sends a POST to /api/users/sync matching the backend's UserSyncDTO:
+ *   { clerkId, email, fullName, avatarUrl }
  *
- * @param session - The active Supabase auth session
+ * The backend upserts: creates the user if new, updates if existing.
+ *
+ * @param payload - The Clerk user data to sync
  * @throws Error if the backend responds with a non-OK status
  */
-export async function syncUserWithBackend(session: Session): Promise<void> {
-  const { user } = session;
-
-  const payload = {
-    uuid: user.id,
-    email: user.email ?? "",
-    fullName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
-    avatarUrl: user.user_metadata?.avatar_url ?? "",
-  };
-
-  /*
-   * [Fix for 405 Error]
-   * We explicitly log the URL to help debug if it's being redirected (HTTP -> HTTPS).
-   * We also ensure 'credentials: include' is set for cross-origin Production requests.
-   */
-  console.log(`Syncing user with backend: ${BACKEND_URL}/api/users/sync`);
-
+export async function syncClerkUser(payload: ClerkUserPayload): Promise<void> {
   const response = await fetch(`${BACKEND_URL}/api/users/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include", // Required for cross-site cookies (Vercel -> Railway)
+    credentials: "include",
     body: JSON.stringify(payload),
   });
 
@@ -58,9 +62,6 @@ export interface DashboardStatusResponse {
 
 /**
  * Fetches the dashboard status from the Spring Boot backend.
- *
- * Calls GET /api/dashboard/status to verify the backend connection
- * and retrieve a simple status payload for the Dashboard page.
  *
  * @returns The parsed DashboardStatusResponse
  * @throws Error if the backend responds with a non-OK status

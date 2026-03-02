@@ -1,29 +1,22 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 /* ================================================================== */
-/*  Browser Supabase Client                                            */
-/*  Uses @supabase/ssr so auth tokens are stored in COOKIES instead   */
-/*  of localStorage. This makes the session visible to the proxy.ts   */
-/*  (server-side middleware) and Server Components.                     */
+/*  Supabase Client — Data Access Only                                 */
 /*                                                                     */
-/*  Import this in all client components ("use client").               */
+/*  Authentication is handled by Clerk.                                */
+/*  This client is used ONLY for querying/mutating data in NeonDB      */
+/*  via the Supabase PostgREST API.                                    */
+/*                                                                     */
+/*  Import this in any component that needs database access.           */
 /* ================================================================== */
 
-export function createClient() {
-  /* CTO NOTE: We add '||' to provide a fake value during the Build process.
-     This prevents the "Error: supabaseKey is required" crash.
-     When the app runs in the real browser, it will use the real keys.
-  */
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-
-  return createBrowserClient(supabaseUrl, supabaseKey);
-}
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 
 /**
- * Convenience singleton for components that just need `supabase`.
- * Still cookie-based via @supabase/ssr under the hood.
+ * Singleton Supabase client for data operations.
+ * No auth — Clerk manages sessions separately.
  */
-export const supabase = createClient();
+export const supabase = createClient(supabaseUrl, supabaseKey);
