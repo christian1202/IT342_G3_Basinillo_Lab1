@@ -79,7 +79,7 @@
 ## 🔮 Phase 9: Future Improvements (ROADMAP)
 
 - [ ] **Search & Filter**: Add search bar to filter shipments by BL Number.
-- [ ] **Dark Mode**: Add theme toggle (Light/Dark).
+- [x] **Dark Mode**: Add theme toggle (Light/Dark).
 - [ ] **Export Data**: Add "Export to CSV" button for reporting.
 - [x] **Spring Boot Integration**: Connect Java backend endpoints for specific data validation.
 - [ ] **Map View**: Visualize shipment coordinates on a map.
