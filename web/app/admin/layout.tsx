@@ -1,5 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -10,54 +9,30 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 
+/* ================================================================== */
+/*  Admin Layout (Server Component)                                    */
+/*  Uses Clerk's server-side currentUser() for role-based access.      */
+/* ================================================================== */
+
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(
-          cookiesToSet: {
-            name: string;
-            value: string;
-            options?: Record<string, unknown>;
-          }[],
-        ) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await currentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch role
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
+  /* Check admin role from Clerk publicMetadata */
+  const role = (user.publicMetadata?.role as string) ?? "";
+  if (role !== "admin") {
     redirect("/dashboard");
   }
+
+  const userEmail =
+    user.emailAddresses?.[0]?.emailAddress ?? "admin@portkey.io";
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -114,7 +89,7 @@ export default async function AdminLayout({
           </h1>
           <div className="text-sm text-gray-500">
             Logged in as:{" "}
-            <span className="font-medium text-gray-800">{user.email}</span>
+            <span className="font-medium text-gray-800">{userEmail}</span>
           </div>
         </header>
 

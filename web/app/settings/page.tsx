@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
@@ -20,10 +20,11 @@ export default function SettingsPage() {
   const [language, setLanguage] = useState("English");
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [smsAlerts, setSMSAlerts] = useState(false);
+  const { signOut } = useClerk();
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     router.push("/login");
   };
 

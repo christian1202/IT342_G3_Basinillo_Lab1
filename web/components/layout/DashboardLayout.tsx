@@ -1,29 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { Menu } from "lucide-react";
 
-import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/layout/Sidebar";
 
 /* ================================================================== */
 /*  DashboardLayout                                                    */
 /*  The "shell" that wraps every authenticated page.                   */
 /*                                                                     */
-/*  Structure:                                                         */
-/*    ┌──────────┬─────────────────────────────────────────┐           */
-/*    │          │  Top Header (mobile hamburger)          │           */
-/*    │ Sidebar  ├─────────────────────────────────────────┤           */
-/*    │ (fixed)  │                                        │           */
-/*    │          │  Scrollable main content ({children})   │           */
-/*    │          │                                        │           */
-/*    └──────────┴─────────────────────────────────────────┘           */
-/*                                                                     */
-/*  Desktop: 250px fixed sidebar.                                      */
-/*  Mobile:  Sidebar hidden behind hamburger → slide-over drawer.      */
-/*                                                                     */
-/*  Auth guard: Redirects to /login if no session is found.            */
+/*  Auth guard: Clerk middleware handles route protection.              */
+/*  Role check: Uses Clerk's publicMetadata.role for admin redirect.   */
 /* ================================================================== */
 
 interface DashboardLayoutProps {
@@ -34,52 +23,20 @@ export default function DashboardLayout({
   children,
 }: DashboardLayoutProps): React.JSX.Element {
   const router = useRouter();
-
-  /* ---- auth state ---- */
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
   /* ---- mobile drawer state ---- */
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  /* ---- resolve session on mount ---- */
-  useEffect(() => {
-    const resolveSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-
-      // Check role
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .single();
-
-      if (profile?.role === "admin") {
-        setIsAdmin(true);
-        // Auto-redirect if on the main dashboard
-        if (window.location.pathname === "/dashboard") {
-          router.replace("/admin");
-        }
-      }
-
-      setIsAuthLoading(false);
-    };
-
-    resolveSession();
-  }, [router]);
+  /* ---- derive admin status from Clerk metadata ---- */
+  const isAdmin = (user?.publicMetadata?.role as string) === "admin";
 
   /* ---- handlers ---- */
   const handleLogout = useCallback(async () => {
-    await supabase.auth.signOut();
+    await signOut();
     router.push("/login");
-  }, [router]);
+  }, [signOut, router]);
 
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
@@ -88,7 +45,7 @@ export default function DashboardLayout({
   /*  EARLY RETURN — Auth Loading                                      */
   /* ================================================================ */
 
-  if (isAuthLoading) {
+  if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">

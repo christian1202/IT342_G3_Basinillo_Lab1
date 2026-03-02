@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { IUserProfile, IShipment } from "@/types/database";
 
-// Define strict return type for the hook
+/* ================================================================== */
+/*  useAdminData                                                       */
+/*  Fetches admin-level data (users + shipments) from NeonDB.          */
+/*  Auth is handled by Clerk middleware — this hook is data-only.      */
+/* ================================================================== */
+
 interface AdminDataPayload {
   users: IUserProfile[];
   shipments: IShipment[];
@@ -23,17 +28,15 @@ export function useAdminData(): AdminDataPayload {
   const [users, setUsers] = useState<IUserProfile[]>([]);
   const [shipments, setShipments] = useState<IShipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Parallel Fetching for performance
       const [userResponse, shipmentResponse] = await Promise.all([
         supabase
           .from("profiles")
           .select("*")
-          .order("created_at", { ascending: false } as any), // Type assertion due to potential DB/Type mismatch on 'created_at' if not manually added to types yet, but strictly it adheres to DB schema
+          .order("created_at", { ascending: false } as any),
         supabase.from("shipments").select("*"),
       ]);
 
@@ -45,13 +48,13 @@ export function useAdminData(): AdminDataPayload {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Derived Metrics (Business Logic)
+  /* ---- Derived Metrics (Business Logic) ---- */
   const metrics = {
     totalRevenue: shipments.reduce(
       (sum, s) => sum + (Number(s.service_fee) || 0),
@@ -66,7 +69,6 @@ export function useAdminData(): AdminDataPayload {
       if (s.status === "DELIVERED") return false;
       const created = new Date(s.created_at);
       const now = new Date();
-      // Difference in days
       const diffDays = Math.ceil(
         Math.abs(now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
       );

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Anchor, Plus, RefreshCw } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
-import { supabase } from "@/lib/supabase";
 import { useShipments } from "@/hooks/useShipments";
 import type { IShipment } from "@/types/database";
 
@@ -20,18 +20,9 @@ import ShipmentForm from "@/components/shipments/ShipmentForm";
 /* ================================================================== */
 
 export default function ShipmentDashboard(): React.JSX.Element {
-  /* ---- resolve userId from session ---- */
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const resolveUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) setUserId(session.user.id);
-    };
-    resolveUser();
-  }, []);
+  /* ---- resolve userId from Clerk ---- */
+  const { user } = useUser();
+  const userId = user?.id ?? null;
 
   /* ---- shipment hook ---- */
   const {

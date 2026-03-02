@@ -1,56 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
-import { IUserProfile } from "@/types/database";
+import { useEffect } from "react";
+
+/* ================================================================== */
+/*  useAdmin                                                           */
+/*  Returns the admin status of the current Clerk user.                */
+/*  Reads role from Clerk publicMetadata (set in Clerk Dashboard).     */
+/* ================================================================== */
 
 export function useAdmin() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoaded } = useUser();
   const router = useRouter();
-  const supabase = createClient();
+
+  const isAdmin = (user?.publicMetadata?.role as string) === "admin";
 
   useEffect(() => {
-    async function checkRole() {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+    if (!isLoaded) return;
 
-        if (!user) {
-          router.push("/login"); // Should be handled by middleware, but safe fallback
-          return;
-        }
-
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-
-        if (error || !profile) {
-          console.error("Error fetching profile:", error);
-          router.push("/dashboard");
-          return;
-        }
-
-        if (profile.role !== "admin") {
-          console.warn("Unauthorized access attempt to admin area.");
-          router.push("/dashboard");
-        } else {
-          setIsAdmin(true);
-        }
-      } catch (err) {
-        console.error("Unexpected error in useAdmin:", err);
-        router.push("/dashboard");
-      } finally {
-        setLoading(false);
-      }
+    if (!user) {
+      router.push("/login");
+      return;
     }
 
-    checkRole();
-  }, [router, supabase]);
+    if (!isAdmin) {
+      console.warn("Unauthorized access attempt to admin area.");
+      router.push("/dashboard");
+    }
+  }, [isLoaded, user, isAdmin, router]);
 
-  return { isAdmin, loading };
+  return { isAdmin: isLoaded && isAdmin, loading: !isLoaded };
 }
