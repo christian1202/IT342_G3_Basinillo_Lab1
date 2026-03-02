@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/shipments")
+@SuppressWarnings("null")
 public class ShipmentController {
 
     private final ShipmentService shipmentService;

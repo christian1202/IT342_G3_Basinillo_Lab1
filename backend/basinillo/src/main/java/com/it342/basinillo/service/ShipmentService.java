@@ -2,10 +2,12 @@ package com.it342.basinillo.service;
 
 import com.it342.basinillo.dto.ShipmentRequest;
 import com.it342.basinillo.dto.UpdateStatusRequest;
+import com.it342.basinillo.entity.Client;
 import com.it342.basinillo.entity.Organization;
 import com.it342.basinillo.entity.Shipment;
 import com.it342.basinillo.entity.ShipmentStatus;
 import com.it342.basinillo.entity.User;
+import com.it342.basinillo.repository.ClientRepository;
 import com.it342.basinillo.repository.ShipmentRepository;
 import com.it342.basinillo.repository.UserRepository;
 import org.springframework.lang.NonNull;
@@ -25,15 +27,19 @@ import java.util.UUID;
  * Multi-tenant: all queries are org-scoped via the assigned broker's organization.
  */
 @Service
+@SuppressWarnings("null")
 public class ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
     private final UserRepository userRepository;
+    private final ClientRepository clientRepository;
 
     public ShipmentService(ShipmentRepository shipmentRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           ClientRepository clientRepository) {
         this.shipmentRepository = shipmentRepository;
         this.userRepository = userRepository;
+        this.clientRepository = clientRepository;
     }
 
     /* ================================================================== */
@@ -53,7 +59,7 @@ public class ShipmentService {
     @Transactional
     public Shipment createShipment(@NonNull ShipmentRequest request) {
 
-        @NonNull User broker = userRepository.findById(request.getBrokerId())
+        User broker = userRepository.findById(request.getBrokerId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getBrokerId()));
 
         Organization org = broker.getOrganization();
@@ -86,8 +92,13 @@ public class ShipmentService {
                 .status(ShipmentStatus.ARRIVED)
                 .serviceFee(request.getServiceFee())
                 .clientName(request.getClientName())
-                // TODO: set client if clientId is provided
                 .build();
+
+        if (request.getClientId() != null) {
+            Client client = clientRepository.findById(request.getClientId())
+                    .orElseThrow(() -> new IllegalArgumentException("Client not found: " + request.getClientId()));
+            shipment.setClient(client);
+        }
 
         return shipmentRepository.save(shipment);
     }
@@ -98,7 +109,7 @@ public class ShipmentService {
 
     @Transactional
     public Shipment updateShipment(@NonNull UUID shipmentId, @NonNull ShipmentRequest request) {
-        @NonNull Shipment shipment = findShipmentById(shipmentId);
+        Shipment shipment = findShipmentById(shipmentId);
 
         shipment.setBlNumber(request.getBlNumber());
         shipment.setVesselName(request.getVesselName());
@@ -115,9 +126,19 @@ public class ShipmentService {
         }
 
         if (request.getBrokerId() != null && !request.getBrokerId().equals(shipment.getAssignedBroker().getId())) {
-             @NonNull User broker = userRepository.findById(request.getBrokerId())
+             User broker = userRepository.findById(request.getBrokerId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getBrokerId()));
              shipment.setAssignedBroker(broker);
+        }
+
+        if (request.getClientId() != null) {
+            if (shipment.getClient() == null || !request.getClientId().equals(shipment.getClient().getId())) {
+                Client client = clientRepository.findById(request.getClientId())
+                        .orElseThrow(() -> new IllegalArgumentException("Client not found: " + request.getClientId()));
+                shipment.setClient(client);
+            }
+        } else {
+            shipment.setClient(null);
         }
 
         return shipmentRepository.save(shipment);
@@ -130,7 +151,7 @@ public class ShipmentService {
     public Shipment updateStatus(@NonNull UUID shipmentId,
                                  @NonNull UpdateStatusRequest request) {
 
-        @NonNull Shipment shipment = findShipmentById(shipmentId);
+        Shipment shipment = findShipmentById(shipmentId);
         shipment.setStatus(request.getStatus());
 
         return shipmentRepository.save(shipment);
@@ -142,7 +163,7 @@ public class ShipmentService {
 
     @Transactional
     public void deleteShipment(@NonNull UUID shipmentId) {
-        @NonNull Shipment shipment = findShipmentById(shipmentId);
+        Shipment shipment = findShipmentById(shipmentId);
         shipmentRepository.delete(shipment);
     }
 

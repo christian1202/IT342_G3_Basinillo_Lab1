@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/clients")
+@SuppressWarnings("null")
 public class ClientController {
 
     private final ClientService clientService;

@@ -19,6 +19,7 @@ import java.util.Optional;
  * membership assignments from Clerk.
  */
 @Service
+@SuppressWarnings("null")
 public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;

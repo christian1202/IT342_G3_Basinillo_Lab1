@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@SuppressWarnings("null")
 public class ClientService {
 
     private final ClientRepository clientRepository;
