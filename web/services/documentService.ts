@@ -1,45 +1,52 @@
-import { supabase } from "@/lib/supabase";
-import type {
-  IShipmentDocument,
-  ICreateDocumentPayload,
-  IServiceResult,
-} from "@/types/database";
+import type { IShipmentDocument, IServiceResult } from "@/types/database";
 
 /* ================================================================== */
 /*  Document Service                                                   */
-/*  Repository-pattern data access for `shipment_documents` table.     */
+/*  Communicates with the Spring Boot backend for document operations.  */
 /* ================================================================== */
 
-/** Table name — defined once to satisfy the DRY principle. */
-const TABLE = "shipment_documents";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 /* ------------------------------------------------------------------ */
-/*  CREATE                                                             */
+/*  UPLOAD                                                             */
 /* ------------------------------------------------------------------ */
 
 /**
- * Attaches a new document record to a shipment.
+ * Uploads a file to the backend, which stores it in Cloudflare R2
+ * and creates a ShipmentDocument record in the database.
  *
- * The caller provides the parent shipment_id, the document_type
- * (e.g. "INVOICE"), and the file_url pointing to Supabase Storage.
- *
- * @param payload - The document fields to insert
- * @returns A result containing the created document or an error message
+ * @param file       - The file to upload
+ * @param shipmentId - The UUID of the parent shipment
+ * @param documentType - The document category (e.g. "BILL_OF_LADING")
+ * @returns The created ShipmentDocument record or an error
  */
-export async function createShipmentDocument(
-  payload: ICreateDocumentPayload,
+export async function uploadDocument(
+  file: File,
+  shipmentId: string,
+  documentType: string = "OTHER",
 ): Promise<IServiceResult<IShipmentDocument>> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .insert(payload)
-    .select()
-    .single();
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("shipmentId", shipmentId);
+    formData.append("documentType", documentType);
 
-  if (error) {
-    return { data: null, error: error.message };
+    const response = await fetch(`${API_BASE}/api/documents/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      const message = errorBody?.error || `Upload failed (${response.status})`;
+      return { data: null, error: message };
+    }
+
+    const data = await response.json();
+    return { data: data as IShipmentDocument, error: null };
+  } catch (e) {
+    return { data: null, error: "Network error during upload." };
   }
-
-  return { data: data as IShipmentDocument, error: null };
 }
 
 /* ------------------------------------------------------------------ */
@@ -49,25 +56,61 @@ export async function createShipmentDocument(
 /**
  * Fetches all documents attached to a specific shipment.
  *
- * Results are ordered by `created_at` descending (newest first).
- *
  * @param shipmentId - The UUID of the parent shipment
- * @returns A result containing the list of documents or an error message
+ * @returns List of documents or an error
  */
 export async function fetchDocumentsByShipment(
   shipmentId: string,
 ): Promise<IServiceResult<IShipmentDocument[]>> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("*")
-    .eq("shipment_id", shipmentId)
-    .order("created_at", { ascending: false });
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/documents/shipment/${shipmentId}`,
+    );
 
-  if (error) {
-    return { data: null, error: error.message };
+    if (!response.ok) {
+      return {
+        data: null,
+        error: `Failed to fetch documents (${response.status})`,
+      };
+    }
+
+    const data = await response.json();
+    return { data: data as IShipmentDocument[], error: null };
+  } catch (e) {
+    return { data: null, error: "Network error fetching documents." };
   }
+}
 
-  return { data: data as IShipmentDocument[], error: null };
+/* ------------------------------------------------------------------ */
+/*  DOWNLOAD — Get presigned URL                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Gets a temporary presigned URL to download a document directly from R2.
+ *
+ * @param documentId - The UUID of the document
+ * @returns Object with `url` and `fileName`, or an error
+ */
+export async function getDocumentDownloadUrl(
+  documentId: string,
+): Promise<IServiceResult<{ url: string; fileName: string }>> {
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/documents/${documentId}/download`,
+    );
+
+    if (!response.ok) {
+      return {
+        data: null,
+        error: `Failed to get download URL (${response.status})`,
+      };
+    }
+
+    const data = await response.json();
+    return { data, error: null };
+  } catch (e) {
+    return { data: null, error: "Network error getting download URL." };
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -75,22 +118,29 @@ export async function fetchDocumentsByShipment(
 /* ------------------------------------------------------------------ */
 
 /**
- * Permanently removes a single document record.
- *
- * This only deletes the database row. The actual file in Supabase
- * Storage must be cleaned up separately if desired.
+ * Permanently removes a document from R2 storage and the database.
  *
  * @param documentId - The UUID of the document to delete
- * @returns A result with `true` on success or an error message
+ * @returns Success flag or an error
  */
-export async function deleteShipmentDocument(
+export async function deleteDocument(
   documentId: string,
 ): Promise<IServiceResult<boolean>> {
-  const { error } = await supabase.from(TABLE).delete().eq("id", documentId);
+  try {
+    const response = await fetch(`${API_BASE}/api/documents/${documentId}`, {
+      method: "DELETE",
+    });
 
-  if (error) {
-    return { data: null, error: error.message };
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      return {
+        data: null,
+        error: errorBody?.error || `Delete failed (${response.status})`,
+      };
+    }
+
+    return { data: true, error: null };
+  } catch (e) {
+    return { data: null, error: "Network error deleting document." };
   }
-
-  return { data: true, error: null };
 }

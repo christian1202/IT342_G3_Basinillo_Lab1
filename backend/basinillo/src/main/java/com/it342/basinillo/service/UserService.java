@@ -8,6 +8,8 @@ import com.it342.basinillo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
 /**
  * Service layer for User management.
  *
@@ -69,5 +71,53 @@ public class UserService {
         }
 
         return userRepository.save(user);
+    }
+
+    /**
+     * Creates or updates a user from a Clerk webhook event.
+     *
+     * Called when Clerk fires `user.created` or `user.updated`.
+     *
+     * @param userData the "data" payload from the Clerk webhook
+     */
+    @Transactional
+    @SuppressWarnings("null")
+    public void syncUserFromWebhook(Map<String, Object> userData) {
+        String clerkId = (String) userData.get("id");
+
+        // Build email from Clerk's email_addresses array
+        String email = null;
+        Object emailAddresses = userData.get("email_addresses");
+        if (emailAddresses instanceof java.util.List<?> list && !list.isEmpty()) {
+            Object first = list.get(0);
+            if (first instanceof java.util.Map<?, ?> emailMap) {
+                email = (String) emailMap.get("email_address");
+            }
+        }
+
+        String firstName = (String) userData.get("first_name");
+        String lastName = (String) userData.get("last_name");
+        String fullName = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+        String avatarUrl = (String) userData.get("image_url");
+
+        // Upsert by clerkId
+        User user = userRepository.findByClerkId(clerkId).orElse(null);
+
+        if (user != null) {
+            user.setEmail(email != null ? email : user.getEmail());
+            user.setFullName(fullName.isEmpty() ? user.getFullName() : fullName);
+            user.setAvatarUrl(avatarUrl);
+        } else {
+            user = User.builder()
+                    .clerkId(clerkId)
+                    .email(email != null ? email : "unknown@portkey.app")
+                    .fullName(fullName.isEmpty() ? "New User" : fullName)
+                    .avatarUrl(avatarUrl)
+                    .role(UserRole.CLIENT)
+                    .organization(organizationRepository.findAll().stream().findFirst().orElse(null))
+                    .build();
+        }
+
+        userRepository.save(user);
     }
 }
