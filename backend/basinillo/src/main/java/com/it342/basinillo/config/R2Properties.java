@@ -14,5 +14,6 @@ public class R2Properties {
     private String accessKey;
     private String secretKey;
     private String bucket;
+    private String accountId;
 
 }

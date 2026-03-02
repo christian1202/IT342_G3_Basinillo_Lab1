@@ -11,6 +11,7 @@ import lombok.Data;
 public class ClerkProperties {
 
     private String jwksUri;
+    private String secretKey;
     private Webhook webhook = new Webhook();
 
     @Data

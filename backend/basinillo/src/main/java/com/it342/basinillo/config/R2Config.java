@@ -1,6 +1,6 @@
 package com.it342.basinillo.config;
 
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -19,27 +19,24 @@ import java.net.URI;
 @Configuration
 public class R2Config {
 
-    @Value("${r2.endpoint}")
-    private String endpoint;
+    private final R2Properties r2Properties;
 
-    @Value("${r2.access-key}")
-    private String accessKey;
-
-    @Value("${r2.secret-key}")
-    private String secretKey;
+    public R2Config(R2Properties r2Properties) {
+        this.r2Properties = r2Properties;
+    }
 
     /**
      * The primary S3Client used for uploading, downloading, and deleting objects.
      */
     @Bean
     public S3Client s3Client() {
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+        AwsBasicCredentials credentials = AwsBasicCredentials.create(r2Properties.getAccessKey(), r2Properties.getSecretKey());
 
         return S3Client.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 // Cloudflare R2 technically expects standard AWS regions like 'auto' or 'us-east-1' for SDK compatibility
                 .region(Region.US_EAST_1)
-                .endpointOverride(URI.create(endpoint))
+                .endpointOverride(URI.create(r2Properties.getEndpoint()))
                 // Required for Cloudflare R2
                 .forcePathStyle(true)
                 .build();
@@ -52,12 +49,12 @@ public class R2Config {
      */
     @Bean
     public S3Presigner s3Presigner() {
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+        AwsBasicCredentials credentials = AwsBasicCredentials.create(r2Properties.getAccessKey(), r2Properties.getSecretKey());
 
         return S3Presigner.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .region(Region.US_EAST_1)
-                .endpointOverride(URI.create(endpoint))
+                .endpointOverride(URI.create(r2Properties.getEndpoint()))
                 .build();
     }
 }
