@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useUser } from "@clerk/nextjs";
+import { useDbUser } from "@/hooks/useDbUser";
 import { supabase } from "@/lib/supabase";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -34,7 +34,7 @@ export function CreateShipmentModal() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { user } = useUser();
+  const { dbUserId } = useDbUser();
 
   const {
     register,
@@ -51,10 +51,10 @@ export function CreateShipmentModal() {
   async function onSubmit(data: ShipmentFormValues) {
     setLoading(true);
     try {
-      if (!user) throw new Error("No user found");
+      if (!dbUserId) throw new Error("No user found");
 
       const { error } = await supabase.from("shipments").insert({
-        user_id: user.id,
+        user_id: dbUserId,
         bl_number: data.bl_number,
         client_name: data.client_name,
         service_fee: data.service_fee, // Saved as Decimal in DB

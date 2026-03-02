@@ -18,5 +18,13 @@ const supabaseKey =
 /**
  * Singleton Supabase client for data operations.
  * No auth — Clerk manages sessions separately.
+ *
+ * persistSession + autoRefreshToken disabled to prevent
+ * stale Supabase cookies from triggering refresh errors.
  */
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});

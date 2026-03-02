@@ -23,17 +23,33 @@ interface ClerkUserPayload {
 }
 
 /**
+ * Shape of the User entity returned by the backend.
+ * Contains the internal database UUID that all other tables reference.
+ */
+export interface BackendUser {
+  id: string; // Internal UUID (e.g., "550e8400-e29b-...")
+  clerkId: string; // Clerk ID (e.g., "user_3ANa...")
+  email: string;
+  fullName: string;
+  avatarUrl: string;
+  role: string;
+}
+
+/**
  * Syncs the authenticated Clerk user with the Spring Boot backend.
  *
- * Sends a POST to /api/users/sync matching the backend's UserSyncDTO:
- *   { clerkId, email, fullName, avatarUrl }
+ * Returns the backend User entity, which contains the **internal UUID**.
+ * This UUID is what the `shipments.user_id` column references.
  *
- * The backend upserts: creates the user if new, updates if existing.
+ * Clerk ID (string) → Backend sync → Internal UUID
  *
  * @param payload - The Clerk user data to sync
+ * @returns The synced BackendUser with internal UUID
  * @throws Error if the backend responds with a non-OK status
  */
-export async function syncClerkUser(payload: ClerkUserPayload): Promise<void> {
+export async function syncClerkUser(
+  payload: ClerkUserPayload,
+): Promise<BackendUser> {
   const response = await fetch(`${BACKEND_URL}/api/users/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -45,6 +61,8 @@ export async function syncClerkUser(payload: ClerkUserPayload): Promise<void> {
     const errorBody = await response.text();
     throw new Error(`Backend sync failed (${response.status}): ${errorBody}`);
   }
+
+  return response.json();
 }
 
 /* ------------------------------------------------------------------ */

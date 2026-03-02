@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Anchor, Plus, RefreshCw } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
 
 import { useShipments } from "@/hooks/useShipments";
+import { useDbUser } from "@/hooks/useDbUser";
 import type { IShipment } from "@/types/database";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -20,9 +20,8 @@ import ShipmentForm from "@/components/shipments/ShipmentForm";
 /* ================================================================== */
 
 export default function ShipmentDashboard(): React.JSX.Element {
-  /* ---- resolve userId from Clerk ---- */
-  const { user } = useUser();
-  const userId = user?.id ?? null;
+  /* ---- resolve internal DB userId via Clerk → backend sync ---- */
+  const { dbUserId: userId } = useDbUser();
 
   /* ---- shipment hook ---- */
   const {

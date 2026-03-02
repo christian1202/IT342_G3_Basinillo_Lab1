@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import { Plus, PackageOpen, Search } from "lucide-react";
 
 import { useShipments } from "@/hooks/useShipments";
+import { useDbUser } from "@/hooks/useDbUser";
 import type { IShipment } from "@/types/database";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -26,9 +26,8 @@ const RECENT_SHIPMENTS_LIMIT = 5;
 export default function DashboardPage(): React.JSX.Element {
   const router = useRouter();
 
-  /* ---- resolve userId from Clerk ---- */
-  const { user, isLoaded } = useUser();
-  const userId = user?.id ?? null;
+  /* ---- resolve internal DB userId via Clerk → backend sync ---- */
+  const { dbUserId: userId } = useDbUser();
 
   /* ---- single data source ---- */
   const {
