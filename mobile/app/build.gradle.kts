@@ -29,8 +29,12 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "SUPABASE_URL", "\"${localProperties["SUPABASE_URL"] ?: ""}\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"${localProperties["SUPABASE_KEY"] ?: ""}\"")
+        /* API Base URL — defaults to emulator localhost */
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            "\"${localProperties["API_BASE_URL"] ?: "http://10.0.2.2:8080"}\""
+        )
     }
 
     buildTypes {
@@ -61,26 +65,29 @@ android {
 }
 
 dependencies {
-
+    // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    
-    // Supabase & Networking
-    implementation(libs.supabase.postgrest)
-    implementation(libs.supabase.gotrue)
+
+    // Networking — Ktor + kotlinx.serialization (REST API)
     implementation(libs.ktor.client.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
 
     // Navigation & UI
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
 
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
