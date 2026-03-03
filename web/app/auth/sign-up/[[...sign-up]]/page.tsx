@@ -1,31 +1,66 @@
 import { SignUp } from "@clerk/nextjs";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export default function SignUpPage() {
   return (
-    <SignUp
-      fallbackRedirectUrl="/dashboard"
-      appearance={{
-        elements: {
-          rootBox: "w-full",
-          card: "shadow-none border border-border w-full sm:w-[400px] bg-card p-4",
-          headerTitle: "text-2xl font-bold tracking-tight text-foreground",
-          headerSubtitle: "text-muted-foreground",
-          formButtonPrimary:
-            "bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-md px-4 py-2 font-medium w-full shadow",
-          formFieldInput:
-            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          formFieldLabel:
-            "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground",
-          footerActionLink: "text-primary hover:text-primary/90 font-medium",
-          socialButtonsBlockButton:
-            "border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 rounded-md px-4 py-2 text-sm shadow-sm",
-          socialButtonsBlockButtonText: "text-foreground font-medium",
-          dividerLine: "bg-border",
-          dividerText: "text-muted-foreground text-xs",
-        },
-      }}
-      // Note: Custom fields like "Organization Name" are configured in the Clerk Dashboard
-      // under User & Authentication -> Custom Fields.
-    />
+    <div className="flex w-full flex-col items-center justify-center space-y-6">
+      <SignUp
+        fallbackRedirectUrl="/dashboard"
+        appearance={{
+          layout: {
+            socialButtonsPlacement: "bottom",
+            logoPlacement: "none",
+            showOptionalFields: false,
+          },
+          variables: {
+            colorPrimary: "#3B82F6",
+            colorBackground: "#131B2E",
+            colorText: "#ffffff",
+            colorInputText: "#ffffff",
+            colorInputBackground: "#0B1120",
+            colorDanger: "#ef4444",
+            fontFamily: "inherit",
+          },
+          elements: {
+            rootBox: "w-full mx-auto",
+            card: "shadow-2xl border border-slate-800 w-full sm:w-[420px] bg-[#131B2E] p-8 rounded-2xl",
+            headerTitle: "text-3xl font-bold tracking-tight text-white mb-2",
+            headerSubtitle: "text-slate-400 text-sm",
+            formButtonPrimary:
+              "bg-[#3B82F6] hover:bg-[#2563EB] text-white h-11 rounded-lg px-4 py-2 font-semibold w-full shadow-lg transition-all",
+            formFieldInput:
+              "flex h-11 w-full rounded-lg border border-slate-700 bg-[#0B1120] px-3 py-2 text-sm text-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:ring-offset-0 focus-visible:border-transparent transition-all",
+            formFieldLabel: "text-sm font-semibold text-slate-300 mb-1.5",
+            footerActionLink:
+              "text-[#3B82F6] hover:text-[#60A5FA] font-medium transition-colors",
+            socialButtonsBlockButton:
+              "border border-slate-700 bg-[#0B1120] hover:bg-slate-800 h-11 rounded-lg px-4 py-2 text-sm shadow-sm transition-colors",
+            socialButtonsBlockButtonText: "text-slate-200 font-medium",
+            dividerLine: "bg-slate-700",
+            dividerText:
+              "text-slate-400 text-xs font-medium uppercase tracking-wider",
+            footerActionText: "text-slate-400 font-medium",
+            formFieldAction:
+              "text-[#3B82F6] hover:text-[#60A5FA] text-sm font-medium transition-colors",
+            identityPreviewText: "text-slate-300",
+            identityPreviewEditButtonIcon:
+              "text-slate-400 hover:text-[#3B82F6]",
+          },
+        }}
+      />
+
+      <div className="w-full sm:w-[420px] text-center mt-4">
+        <p className="text-sm text-slate-500">
+          Already have an account?{" "}
+          <Link
+            href="/auth/sign-in"
+            className="inline-flex items-center font-medium text-[#3B82F6] hover:text-[#60A5FA] transition-colors"
+          >
+            <ArrowLeft className="mr-1 h-3 w-3" /> Back to Sign In
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 }

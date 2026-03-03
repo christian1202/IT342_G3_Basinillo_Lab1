@@ -1,4 +1,4 @@
-import { LayoutSidebar } from "../../components/layout/LayoutSidebar";
+import { LayoutSidebar } from "@/components/layout/LayoutSidebar";
 import { UserButton } from "@clerk/nextjs";
 
 export default function DashboardLayout({
