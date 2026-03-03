@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle, Circle } from "lucide-react";
-import type { ShipmentStatus } from "@portkey/shared-types";
+import type { ShipmentStatus } from "@/types/database";
 
 /* ================================================================== */
 /*  StageProgress                                                      */

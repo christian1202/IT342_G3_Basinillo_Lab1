@@ -5,6 +5,8 @@ import com.it342.basinillo.service.AuditLogService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.lang.NonNull;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -28,7 +30,7 @@ public class AuditLogController {
 
     @GetMapping("/shipment/{shipmentId}")
     public ResponseEntity<List<AuditLogResponse>> getAuditLogs(
-            @PathVariable UUID shipmentId) {
+            @PathVariable @NonNull UUID shipmentId) {
         List<AuditLogResponse> logs = auditLogService.findByShipmentId(shipmentId)
                 .stream()
                 .map(AuditLogResponse::fromEntity)

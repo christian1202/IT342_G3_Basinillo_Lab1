@@ -79,7 +79,7 @@ public class EmailService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(apiKey);
+            headers.setBearerAuth(java.util.Objects.requireNonNull(apiKey));
 
             Map<String, Object> payload = Map.of(
                     "from", fromEmail,
