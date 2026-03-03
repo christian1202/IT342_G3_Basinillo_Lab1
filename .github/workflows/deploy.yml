@@ -15,8 +15,6 @@ jobs:
 
       - name: Deploy to Railway
         working-directory: ./backend/basinillo
-        run: |
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-          railway deploy
+        run: railway up --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
