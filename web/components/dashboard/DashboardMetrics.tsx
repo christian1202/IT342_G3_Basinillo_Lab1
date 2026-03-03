@@ -1,25 +1,28 @@
 "use client";
 
 import { useMemo } from "react";
-import { LucideIcon, Package, Truck, CheckCircle, Clock } from "lucide-react";
+import {
+  LucideIcon,
+  Package,
+  Anchor,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
 import type { IShipment } from "@/types/database";
 
 /* ================================================================== */
 /*  METRIC DEFINITIONS                                                 */
-/*  Config-driven: add a new card by adding an entry here.             */
-/*  Each definition maps a label → a filter fn + visual styling.       */
+/*  Maps each metric → a filter function + visual styling.             */
+/*  Uses the 5-stage lifecycle: ARRIVED→LODGED→ASSESSED→PAID→RELEASED  */
 /* ================================================================== */
 
 interface MetricDefinition {
   title: string;
   icon: LucideIcon;
-  /** Tailwind classes for the icon container gradient. */
   iconBg: string;
-  /** Tailwind class for the icon container shadow colour. */
   iconShadow: string;
-  /** Tailwind class for the value text colour. */
   valueColor: string;
-  /** Filter function applied to shipments to derive the count. */
   filter: (s: IShipment) => boolean;
 }
 
@@ -33,34 +36,39 @@ const METRIC_DEFS: MetricDefinition[] = [
     filter: () => true,
   },
   {
-    title: "In Transit",
-    icon: Truck,
+    title: "In Progress",
+    icon: Clock,
     iconBg: "from-amber-500 to-orange-500",
     iconShadow: "shadow-amber-500/30",
     valueColor: "text-amber-700 dark:text-amber-400",
-    filter: (s) => s.status === "IN_TRANSIT",
+    filter: (s) => ["ARRIVED", "LODGED", "ASSESSED", "PAID"].includes(s.status),
   },
   {
-    title: "Delivered",
+    title: "Released",
     icon: CheckCircle,
     iconBg: "from-emerald-600 to-green-600",
     iconShadow: "shadow-emerald-500/30",
     valueColor: "text-emerald-700 dark:text-emerald-400",
-    filter: (s) => s.status === "DELIVERED",
+    filter: (s) => s.status === "RELEASED",
   },
   {
-    title: "Pending",
-    icon: Clock,
-    iconBg: "from-slate-500 to-slate-600",
-    iconShadow: "shadow-slate-500/30",
-    valueColor: "text-slate-700 dark:text-slate-400",
-    filter: (s) => s.status === "PENDING",
+    title: "Demurrage Risk",
+    icon: AlertTriangle,
+    iconBg: "from-red-500 to-rose-600",
+    iconShadow: "shadow-red-500/30",
+    valueColor: "text-red-700 dark:text-red-400",
+    filter: (s) => {
+      if (!s.doomsdayDate) return false;
+      const days = Math.ceil(
+        (new Date(s.doomsdayDate).getTime() - Date.now()) / 86_400_000,
+      );
+      return days <= 3 && s.status !== "RELEASED";
+    },
   },
 ];
 
 /* ================================================================== */
-/*  MetricCard — Reusable sub-component                                */
-/*  Displays a single stat (title + count + icon).                     */
+/*  MetricCard                                                         */
 /* ================================================================== */
 
 interface MetricCardProps {
@@ -82,14 +90,11 @@ function MetricCard({
 }: MetricCardProps): React.JSX.Element {
   return (
     <article className="flex items-center gap-4 rounded-2xl border border-slate-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md dark:border-slate-700/60 dark:bg-slate-900/80">
-      {/* Icon */}
       <div
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${iconBg} shadow-lg ${iconShadow}`}
       >
         <Icon className="h-5 w-5 text-white" />
       </div>
-
-      {/* Text */}
       <div>
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
           {title}
@@ -101,7 +106,7 @@ function MetricCard({
 }
 
 /* ================================================================== */
-/*  MetricCardSkeleton — Pulsating placeholder during loading          */
+/*  MetricCardSkeleton                                                 */
 /* ================================================================== */
 
 function MetricCardSkeleton(): React.JSX.Element {
@@ -118,17 +123,10 @@ function MetricCardSkeleton(): React.JSX.Element {
 
 /* ================================================================== */
 /*  DashboardMetrics                                                   */
-/*  Derives counts from the shipments array via useMemo.               */
-/*                                                                     */
-/*  Props:                                                             */
-/*    • shipments — array of IShipment (from the hook / parent)        */
-/*    • isLoading — when true, renders 4 skeleton cards                */
 /* ================================================================== */
 
 interface DashboardMetricsProps {
-  /** The full shipments list to derive stats from. */
   shipments: IShipment[];
-  /** When true, renders skeleton placeholders instead of real data. */
   isLoading: boolean;
 }
 
@@ -136,10 +134,6 @@ export default function DashboardMetrics({
   shipments,
   isLoading,
 }: DashboardMetricsProps): React.JSX.Element {
-  /**
-   * Derive all metric counts in a single pass through the array.
-   * useMemo ensures this only re-runs when `shipments` changes.
-   */
   const metrics = useMemo(() => {
     return METRIC_DEFS.map((def) => ({
       ...def,
@@ -147,7 +141,6 @@ export default function DashboardMetrics({
     }));
   }, [shipments]);
 
-  /* ---- Loading State ---- */
   if (isLoading) {
     return (
       <div
@@ -163,7 +156,6 @@ export default function DashboardMetrics({
     );
   }
 
-  /* ---- Metrics Grid ---- */
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
       {metrics.map(({ title, value, icon, iconBg, iconShadow, valueColor }) => (

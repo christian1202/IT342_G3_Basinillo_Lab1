@@ -9,14 +9,14 @@
 export enum ShipmentStatus {
   ARRIVED = "ARRIVED",
   LODGED = "LODGED",
-  UNDER_ASSESSMENT = "UNDER_ASSESSMENT",
-  PAYMENT_PENDING = "PAYMENT_PENDING",
+  ASSESSED = "ASSESSED",
+  PAID = "PAID",
   RELEASED = "RELEASED",
 }
 
 // ── BOC Lane Assignment ────────────────────────────────────────
 export enum LaneStatus {
-  NONE = "NONE",
+  PENDING = "PENDING",
   GREEN = "GREEN",
   YELLOW = "YELLOW",
   RED = "RED",
@@ -53,7 +53,6 @@ export enum DemurrageUrgency {
   SAFE = "SAFE",
   WARNING = "WARNING",
   CRITICAL = "CRITICAL",
-  OVERDUE = "OVERDUE",
 }
 
 // ── Organization Plan Tiers ────────────────────────────────────
@@ -62,4 +61,23 @@ export enum OrgPlan {
   PRO = "PRO",
   BUSINESS = "BUSINESS",
   ENTERPRISE = "ENTERPRISE",
+}
+
+// ── Audit Log Actions ──────────────────────────────────────────
+export enum AuditAction {
+  SHIPMENT_CREATED = "SHIPMENT_CREATED",
+  STATUS_CHANGED = "STATUS_CHANGED",
+  LANE_CHANGED = "LANE_CHANGED",
+  DOCUMENT_UPLOADED = "DOCUMENT_UPLOADED",
+  DOCUMENT_DELETED = "DOCUMENT_DELETED",
+  ITEM_ADDED = "ITEM_ADDED",
+  ITEM_EDITED = "ITEM_EDITED",
+  ITEM_DELETED = "ITEM_DELETED",
+}
+
+// ── Notification Types ─────────────────────────────────────────
+export enum NotificationType {
+  DEMURRAGE_WARNING = "DEMURRAGE_WARNING",
+  DEMURRAGE_CRITICAL = "DEMURRAGE_CRITICAL",
+  STAGE_CHANGE = "STAGE_CHANGE",
 }

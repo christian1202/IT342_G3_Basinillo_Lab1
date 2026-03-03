@@ -1,64 +1,55 @@
-import { supabase } from "@/lib/supabase";
 import type {
   IShipment,
+  IShipmentDetail,
   ICreateShipmentPayload,
   IUpdateShipmentPayload,
+  IDemurrageStatus,
   IServiceResult,
 } from "@/types/database";
+import type { ShipmentStatus, LaneStatus } from "@portkey/shared-types";
 
 /* ================================================================== */
 /*  Shipment Service                                                   */
-/*  Repository-pattern data access for the `shipments` table.          */
+/*  All calls go through the Spring Boot backend REST API.             */
 /* ================================================================== */
 
-/** Table name — defined once to satisfy the DRY principle. */
-const TABLE = "shipments";
-
-/* ------------------------------------------------------------------ */
-/*  CREATE                                                             */
-/* ------------------------------------------------------------------ */
-
-const BACKEND_URL = (
+const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 ).replace(/\/$/, "");
 
 /**
- * Creates a new shipment via the Spring Boot backend REST API.
- *
- * This bypasses Supabase directly to allow the backend to handle
- * ownership, tenant assignment (organization), and 5-stage defaults.
- *
- * @param payload - The shipment fields to insert
- * @returns A result containing the created shipment or an error message
+ * Helper to make authenticated API calls.
+ * Wraps fetch with standard error handling → IServiceResult.
  */
-export async function createShipment(
-  payload: ICreateShipmentPayload,
-): Promise<IServiceResult<IShipment>> {
+async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<IServiceResult<T>> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/shipments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        brokerId: payload.user_id,
-        blNumber: payload.bl_number,
-        vesselName: payload.vessel_name,
-        containerNumber: payload.container_number,
-        arrivalDate: payload.arrival_date,
-        serviceFee: payload.service_fee,
-        clientName: payload.client_name,
-      }),
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return {
         data: null,
-        error: errorData.error || `Backend error: ${response.status}`,
+        error:
+          errorData.message || errorData.error || `Error: ${response.status}`,
       };
     }
 
+    // Handle 204 No Content (e.g., DELETE)
+    if (response.status === 204) {
+      return { data: null as unknown as T, error: null };
+    }
+
     const data = await response.json();
-    return { data: data as IShipment, error: null };
+    return { data: data as T, error: null };
   } catch (err: unknown) {
     return {
       data: null,
@@ -68,149 +59,127 @@ export async function createShipment(
 }
 
 /* ------------------------------------------------------------------ */
-/*  READ — List by user                                                */
+/*  CREATE                                                             */
 /* ------------------------------------------------------------------ */
 
-/**
- * Fetches all shipments belonging to a specific user, newest first.
- *
- * Used on the Dashboard to show a client their cargo consignments.
- * Results are ordered by `created_at` descending so the most recent
- * shipment appears at the top.
- *
- * @param userId - The UUID of the shipment owner
- * @returns A result containing the list of shipments or an error message
- */
-export async function fetchShipmentsByUser(
-  userId: string,
-): Promise<IServiceResult<IShipment[]>> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: data as IShipment[], error: null };
+export async function createShipment(
+  payload: ICreateShipmentPayload,
+): Promise<IServiceResult<IShipment>> {
+  return apiFetch<IShipment>("/api/shipments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 /* ------------------------------------------------------------------ */
-/*  READ — Single by ID                                                */
+/*  READ — List (with optional filters)                                */
 /* ------------------------------------------------------------------ */
 
+export interface ShipmentFilters {
+  status?: ShipmentStatus;
+  laneStatus?: LaneStatus;
+  assignedBrokerId?: string;
+  clientId?: string;
+  arrivalDateFrom?: string;
+  arrivalDateTo?: string;
+}
+
+export async function fetchShipments(
+  filters?: ShipmentFilters,
+): Promise<IServiceResult<IShipment[]>> {
+  const params = new URLSearchParams();
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
+  }
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch<IShipment[]>(`/api/shipments${query}`);
+}
+
 /**
- * Fetches a single shipment by its primary key.
- *
- * @param shipmentId - The UUID of the shipment
- * @returns A result containing the shipment or an error message
+ * @deprecated Use fetchShipments() instead — this wraps the same endpoint.
  */
+export async function fetchShipmentsByUser(
+  _userId: string,
+): Promise<IServiceResult<IShipment[]>> {
+  return fetchShipments();
+}
+
+/* ------------------------------------------------------------------ */
+/*  READ — Single by ID (full detail)                                  */
+/* ------------------------------------------------------------------ */
+
 export async function fetchShipmentById(
   shipmentId: string,
-): Promise<IServiceResult<IShipment>> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("*")
-    .eq("id", shipmentId)
-    .single();
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: data as IShipment, error: null };
+): Promise<IServiceResult<IShipmentDetail>> {
+  return apiFetch<IShipmentDetail>(`/api/shipments/${shipmentId}`);
 }
 
 /* ------------------------------------------------------------------ */
 /*  UPDATE                                                             */
 /* ------------------------------------------------------------------ */
 
-/**
- * Updates mutable fields on an existing shipment.
- *
- * Only the fields present in the payload are overwritten;
- * unspecified fields remain unchanged. Immutable fields
- * (id, user_id, bl_number, created_at) cannot be modified.
- *
- * @param shipmentId - The UUID of the shipment to update
- * @param payload    - An object containing only the fields to change
- * @returns A result containing the updated shipment or an error message
- */
 export async function updateShipment(
   shipmentId: string,
   payload: IUpdateShipmentPayload,
 ): Promise<IServiceResult<IShipment>> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .update(payload)
-    .eq("id", shipmentId)
-    .select()
-    .single();
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: data as IShipment, error: null };
+  return apiFetch<IShipment>(`/api/shipments/${shipmentId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
 
 /* ------------------------------------------------------------------ */
-/*  UPDATE — Status only (Step 4: frontend chain to backend PATCH)     */
+/*  STATUS UPDATE                                                      */
 /* ------------------------------------------------------------------ */
 
-/**
- * Updates only the lifecycle status of an existing shipment.
- *
- * Frontend counterpart to the backend chain:
- *   Step 1 → UpdateStatusRequest DTO
- *   Step 2 → ShipmentService.updateStatus()
- *   Step 3 → PATCH /api/shipments/{id}/status
- *
- * @param shipmentId - The UUID of the shipment to update
- * @param status     - The new ShipmentStatus value
- * @returns A result containing the updated shipment or an error message
- */
 export async function updateShipmentStatus(
   shipmentId: string,
-  status: import("@/types/database").ShipmentStatus,
+  status: ShipmentStatus,
 ): Promise<IServiceResult<IShipment>> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .update({ status })
-    .eq("id", shipmentId)
-    .select()
-    .single();
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: data as IShipment, error: null };
+  return apiFetch<IShipment>(`/api/shipments/${shipmentId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }
 
 /* ------------------------------------------------------------------ */
-/*  DELETE                                                             */
+/*  LANE STATUS UPDATE                                                 */
 /* ------------------------------------------------------------------ */
 
-/**
- * Permanently removes a shipment and its associated documents.
- *
- * The `ON DELETE CASCADE` foreign key on shipment_documents ensures
- * that child documents are deleted automatically by the database.
- *
- * @param shipmentId - The UUID of the shipment to delete
- * @returns A result with `true` on success or an error message
- */
+export async function updateShipmentLane(
+  shipmentId: string,
+  laneStatus: LaneStatus,
+): Promise<IServiceResult<IShipment>> {
+  return apiFetch<IShipment>(`/api/shipments/${shipmentId}/lane`, {
+    method: "PATCH",
+    body: JSON.stringify({ laneStatus }),
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  DELETE (soft delete)                                                */
+/* ------------------------------------------------------------------ */
+
 export async function deleteShipment(
   shipmentId: string,
 ): Promise<IServiceResult<boolean>> {
-  const { error } = await supabase.from(TABLE).delete().eq("id", shipmentId);
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
+  const result = await apiFetch<void>(`/api/shipments/${shipmentId}`, {
+    method: "DELETE",
+  });
+  if (result.error) return { data: null, error: result.error };
   return { data: true, error: null };
+}
+
+/* ------------------------------------------------------------------ */
+/*  DEMURRAGE STATUS                                                   */
+/* ------------------------------------------------------------------ */
+
+export async function fetchDemurrageStatus(
+  shipmentId: string,
+): Promise<IServiceResult<IDemurrageStatus>> {
+  return apiFetch<IDemurrageStatus>(
+    `/api/shipments/${shipmentId}/demurrage-status`,
+  );
 }

@@ -1,21 +1,32 @@
 /* ================================================================== */
 /*  Database Type Definitions                                          */
-/*  Mirrors the Supabase PostgreSQL schema for strict type safety.     */
+/*  Mirrors the Spring Boot backend DTOs for strict type safety.       */
 /* ================================================================== */
+
+import {
+  ShipmentStatus,
+  LaneStatus,
+  DocumentType,
+  OcrStatus,
+  DemurrageUrgency,
+  AuditAction,
+} from "@portkey/shared-types";
+
+// Re-export enums so consumers can import from a single location
+export {
+  ShipmentStatus,
+  LaneStatus,
+  DocumentType,
+  OcrStatus,
+  DemurrageUrgency,
+  AuditAction,
+};
 
 /* ------------------------------------------------------------------ */
 /*  Shared Types                                                       */
 /* ------------------------------------------------------------------ */
 
-/**
- * Standardised result object returned by every service function.
- *
- * - On success: `data` holds the payload, `error` is null.
- * - On failure: `data` is null, `error` holds the message.
- *
- * This pattern lets the UI handle outcomes gracefully
- * without relying on try/catch at the component level.
- */
+/** Standard result wrapper for service functions. */
 export interface IServiceResult<T> {
   data: T | null;
   error: string | null;
@@ -25,110 +36,156 @@ export interface IServiceResult<T> {
 /*  User Profile                                                       */
 /* ------------------------------------------------------------------ */
 
-/**
- * Mirrors the `public.profiles` table.
- * Synced from Supabase Auth on login/signup.
- */
+/** Mirrors backend User entity (synced from Clerk). */
 export interface IUserProfile {
-  id: string; /* UUID — matches Supabase Auth user id */
+  id: string;
   email: string;
-  full_name: string;
-  role: string; /* "admin" | "broker" | "client"        */
-  avatar_url: string;
-  created_at?: string; /* ISO-8601 timestamp */
+  fullName: string;
+  role: string;
+  avatarUrl?: string;
+  createdAt?: string;
 }
 
 /* ------------------------------------------------------------------ */
-/*  Shipment Status                                                    */
+/*  Client                                                             */
 /* ------------------------------------------------------------------ */
 
-/**
- * Possible lifecycle statuses for a shipment.
- * Matches the ShipmentStatus Java enum on the backend.
- */
-export type ShipmentStatus =
-  | "PENDING"
-  | "IN_TRANSIT"
-  | "ARRIVED"
-  | "CUSTOMS_HOLD"
-  | "RELEASED"
-  | "DELIVERED"
-  | "DELAYED"
-  | "CANCELLED";
+export interface IClient {
+  id: string;
+  name: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+}
 
 /* ------------------------------------------------------------------ */
-/*  Shipment                                                           */
+/*  Shipment (List View — mirrors ShipmentResponse DTO)                */
 /* ------------------------------------------------------------------ */
 
-/**
- * Mirrors the `public.shipments` table.
- * Represents a single cargo consignment tracked through customs.
- */
 export interface IShipment {
-  id: string; /* UUID primary key                */
-  user_id: string; /* FK → profiles.id               */
-  bl_number: string; /* Unique Bill of Lading number   */
-  vessel_name: string | null;
-  container_number: string | null;
-  arrival_date: string | null; /* ISO-8601 timestamp (ETA)       */
+  id: string;
+  blNumber: string;
+  vesselName: string;
+  voyageNo?: string;
+  containerNumber?: string;
+  portOfDischarge?: string;
   status: ShipmentStatus;
-  created_at: string; /* ISO-8601 timestamp             */
-  destination_city?: string | null;
-  destination_port?: string | null;
-  origin_city?: string | null;
-  origin_port?: string | null;
-  service_fee: number; /* Brokerage revenue */
-  client_name?: string | null;
-}
-
-/**
- * Fields required when creating a new shipment.
- * Omits server-generated fields (id, status, created_at).
- */
-export interface ICreateShipmentPayload {
-  user_id: string;
-  bl_number: string;
-  vessel_name?: string;
-  container_number?: string;
-  arrival_date?: string;
-  service_fee?: number;
-  client_name?: string;
-}
-
-/**
- * Fields that may be updated on an existing shipment.
- * All optional — only provided fields are written.
- */
-export interface IUpdateShipmentPayload {
-  vessel_name?: string;
-  container_number?: string;
-  arrival_date?: string;
-  status?: ShipmentStatus;
-  service_fee?: number;
-  client_name?: string;
+  laneStatus: LaneStatus;
+  entryNumber?: string;
+  arrivalDate?: string;
+  freeTimeDays?: number;
+  doomsdayDate?: string;
+  serviceFee?: number;
+  client?: IClient;
+  clientName?: string;
+  itemCount: number;
+  documentCount: number;
 }
 
 /* ------------------------------------------------------------------ */
-/*  Shipment Document                                                  */
+/*  Shipment Detail (Full View — mirrors ShipmentDetailResponse DTO)   */
 /* ------------------------------------------------------------------ */
 
-/**
- * Mirrors the `public.shipment_documents` table.
- * Represents a file (invoice, packing list, etc.) attached to a shipment.
- */
+export interface IShipmentDetail extends IShipment {
+  orgId: string;
+  assignedBrokerId?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: IShipmentItem[];
+  documents: IShipmentDocument[];
+  auditLogs: IAuditLog[];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shipment Item (mirrors ShipmentItemResponse DTO)                   */
+/* ------------------------------------------------------------------ */
+
+export interface IShipmentItem {
+  id: string;
+  shipmentId: string;
+  description: string;
+  quantity?: number;
+  unit?: string;
+  unitValue?: number;
+  currency: string;
+  hsCode?: string;
+  dutyRate?: number;
+  vatRate?: number;
+  estimatedDuty?: number;
+  aiConfidenceScore?: number;
+  isVerified: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shipment Document (mirrors DocumentResponse DTO)                   */
+/* ------------------------------------------------------------------ */
+
 export interface IShipmentDocument {
-  id: string; /* UUID primary key                     */
-  shipment_id: string; /* FK → shipments.id                   */
-  document_type: string; /* e.g. "INVOICE", "PACKING_LIST"      */
-  file_url: string; /* Supabase Storage URL                 */
-  created_at: string; /* ISO-8601 timestamp                   */
+  id: string;
+  shipmentId: string;
+  documentType: DocumentType;
+  fileName: string;
+  fileUrl: string;
+  uploadedBy?: string;
+  ocrStatus: OcrStatus;
+  createdAt: string;
 }
 
-/**
- * Fields required when attaching a new document to a shipment.
- */
-export interface ICreateDocumentPayload {
-  shipment_id: string;
-  document_type: string;
-  file_url: string;
+/* ------------------------------------------------------------------ */
+/*  Audit Log (mirrors AuditLogResponse DTO)                           */
+/* ------------------------------------------------------------------ */
+
+export interface IAuditLog {
+  id: string;
+  shipmentId: string;
+  userId: string;
+  action: AuditAction;
+  entityType: string;
+  oldValue?: string;
+  newValue?: string;
+  timestamp: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Demurrage Status (mirrors DemurrageStatusResponse DTO)             */
+/* ------------------------------------------------------------------ */
+
+export interface IDemurrageStatus {
+  daysRemaining: number;
+  urgency: DemurrageUrgency;
+  estimatedCost: number;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Request Payloads                                                   */
+/* ------------------------------------------------------------------ */
+
+/** Payload for POST /api/shipments. */
+export interface ICreateShipmentPayload {
+  brokerId: string;
+  clientId?: string;
+  blNumber: string;
+  vesselName: string;
+  voyageNo?: string;
+  containerNumber?: string;
+  portOfDischarge?: string;
+  arrivalDate?: string;
+  freeTimeDays?: number;
+  serviceFee?: number;
+  clientName?: string;
+}
+
+/** Payload for PUT /api/shipments/:id. */
+export interface IUpdateShipmentPayload extends ICreateShipmentPayload {}
+
+/** Payload for POST /api/shipments/:id/items. */
+export interface ICreateShipmentItemPayload {
+  description: string;
+  quantity?: number;
+  unit?: string;
+  unitValue?: number;
+  currency?: string;
+  hsCode?: string;
+  dutyRate?: number;
+  vatRate?: number;
 }

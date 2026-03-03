@@ -68,9 +68,10 @@ public class AuditLog {
     /*  Change Details                                                     */
     /* ------------------------------------------------------------------ */
 
-    /** Action performed: "CREATE", "UPDATE", "DELETE", "STATUS_CHANGE". */
+    /** Action performed — type-safe enum (e.g., STATUS_CHANGED, LANE_CHANGED). */
+    @Enumerated(EnumType.STRING)
     @Column(name = "action", nullable = false, length = 30)
-    private String action;
+    private AuditAction action;
 
     /** Type of entity that was changed (e.g., "SHIPMENT", "DOCUMENT"). */
     @Column(name = "entity_type", nullable = false, length = 30)

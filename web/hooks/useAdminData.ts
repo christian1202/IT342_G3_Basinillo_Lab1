@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
 import { IUserProfile, IShipment } from "@/types/database";
+import { fetchShipments } from "@/services/shipmentService";
 
 /* ================================================================== */
 /*  useAdminData                                                       */
-/*  Fetches admin-level data (users + shipments) from NeonDB.          */
-/*  Auth is handled by Clerk middleware — this hook is data-only.      */
+/*  Fetches admin-level data (users + shipments) from the backend.     */
 /* ================================================================== */
+
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+).replace(/\/$/, "");
 
 interface AdminDataPayload {
   users: IUserProfile[];
@@ -16,9 +19,8 @@ interface AdminDataPayload {
   metrics: {
     totalRevenue: number;
     activeShipments: number;
-    delayedShipments: number;
+    demurrageRisk: number;
     uniqueClients: number;
-    chartData: { date: string; revenue: number }[];
   };
   loading: boolean;
   refresh: () => Promise<void>;
@@ -32,17 +34,18 @@ export function useAdminData(): AdminDataPayload {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [userResponse, shipmentResponse] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("*")
-          .order("created_at", { ascending: false } as any),
-        supabase.from("shipments").select("*"),
-      ]);
+      /* Fetch users from backend */
+      const userRes = await fetch(`${API_URL}/api/users`);
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setUsers(userData as IUserProfile[]);
+      }
 
-      if (userResponse.data) setUsers(userResponse.data as IUserProfile[]);
-      if (shipmentResponse.data)
-        setShipments(shipmentResponse.data as IShipment[]);
+      /* Fetch shipments from backend */
+      const shipResult = await fetchShipments();
+      if (!shipResult.error && shipResult.data) {
+        setShipments(shipResult.data);
+      }
     } catch (error) {
       console.error("Failed to fetch admin data:", error);
     } finally {
@@ -54,45 +57,24 @@ export function useAdminData(): AdminDataPayload {
     fetchData();
   }, [fetchData]);
 
-  /* ---- Derived Metrics (Business Logic) ---- */
+  /* Derived metrics */
   const metrics = {
     totalRevenue: shipments.reduce(
-      (sum, s) => sum + (Number(s.service_fee) || 0),
+      (sum, s) => sum + (Number(s.serviceFee) || 0),
       0,
     ),
-
-    activeShipments: shipments.filter(
-      (s) => s.status === "IN_TRANSIT" || s.status === "PENDING",
+    activeShipments: shipments.filter((s) =>
+      ["ARRIVED", "LODGED", "ASSESSED", "PAID"].includes(s.status),
     ).length,
-
-    delayedShipments: shipments.filter((s) => {
-      if (s.status === "DELIVERED") return false;
-      const created = new Date(s.created_at);
-      const now = new Date();
-      const diffDays = Math.ceil(
-        Math.abs(now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
+    demurrageRisk: shipments.filter((s) => {
+      if (!s.doomsdayDate || s.status === "RELEASED") return false;
+      const days = Math.ceil(
+        (new Date(s.doomsdayDate).getTime() - Date.now()) / 86_400_000,
       );
-      return diffDays > 30;
+      return days <= 3;
     }).length,
-
-    uniqueClients: new Set(shipments.map((s) => s.client_name).filter(Boolean))
+    uniqueClients: new Set(shipments.map((s) => s.clientName).filter(Boolean))
       .size,
-
-    chartData: Object.entries(
-      shipments.reduce(
-        (acc, curr) => {
-          const date = new Date(curr.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
-          acc[date] = (acc[date] || 0) + (curr.service_fee || 0);
-          return acc;
-        },
-        {} as Record<string, number>,
-      ),
-    )
-      .map(([date, revenue]) => ({ date, revenue }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
   };
 
   return { users, shipments, metrics, loading, refresh: fetchData };

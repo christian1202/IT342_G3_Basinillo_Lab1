@@ -68,7 +68,7 @@ A drag-and-drop document processor that uses OCR to read a Commercial Invoice or
 
 Step	Action	Technology
 1	Broker drags a PDF or image into the upload zone	React Dropzone (Next.js frontend)
-2	File uploaded to secure temporary storage	Supabase Storage (free tier)
+2	File uploaded to secure temporary storage	cloudflare r2 Storage (free tier)
 3	OCR engine processes document and extracts structured data	Google Cloud Document AI or Tesseract OCR
 4	NLP layer identifies fields: Consignee, Vessel, Container No., etc.	Spring Boot AI service (Java + LangChain4j)
 5	Extracted fields pre-populate the Create Shipment form	Next.js form state (React Hook Form + Zod)
@@ -270,8 +270,8 @@ Clerk Expo SDK	Auth for React Native mobile app	Free (included)
 
 6.6 File Storage
 Technology	Purpose	Free Tier
-Supabase Storage	Store uploaded documents (BL, CI, Packing List, etc.)	Free: 1GB storage, 2GB bandwidth/month
-Supabase SDK	Client library for Next.js and Spring Boot file operations	Free (open source)
+cloudflare r2 Storage	Store uploaded documents (BL, CI, Packing List, etc.)	Free: 1GB storage, 2GB bandwidth/month
+cloudflare r2 SDK	Client library for Next.js and Spring Boot file operations	Free (open source)
 
 6.7 AI & Machine Learning
 Technology	Purpose	Free Tier / Cost
@@ -328,14 +328,14 @@ Mobile Client	React Native (Expo) → EAS	Broker mobile app, push notifications,
 Backend API	Spring Boot → Railway	Core business logic, auth validation, cron jobs, AI integrations
 AI Service	Spring Boot + LangChain4j	RAG pipeline for Compliance Copilot, OCR orchestration for Smart-Scan
 Database	NeonDB (PostgreSQL + pgvector)	All persistent data + vector embeddings for HS Code search
-File Storage	Supabase Storage	Shipment documents (BL, CI, Packing List, etc.)
+File Storage	cloudflare r2 Storage	Shipment documents (BL, CI, Packing List, etc.)
 Auth Service	Clerk	User identity, org management, JWT issuance, webhooks to sync to DB
 Email Service	Resend	Transactional emails — alerts, stage changes, welcome
 Push Notifications	Expo FCM + Firebase	Mobile push alerts for demurrage and stage updates
 
 7.2 Data Flow — Smart-Scan
 1.	Broker uploads PDF via drag-and-drop in Next.js frontend
-2.	File is sent to Supabase Storage; a reference is stored in NeonDB
+2.	File is sent to cloudflare r2 Storage; a reference is stored in NeonDB
 3.	Next.js API Route calls Spring Boot OCR endpoint with the file URL
 4.	Spring Boot calls Google Document AI API; receives structured JSON response
 5.	Spring Boot NLP layer maps extracted fields to shipment form schema
@@ -386,7 +386,7 @@ Phase 0 — Foundation (Week 1–2)
 •	Monorepo setup: /apps/web, /apps/mobile, /apps/api, /packages/shared-types
 •	NeonDB provisioned; Prisma schema migrations run
 •	Clerk configured: organizations, roles, webhooks to Spring Boot
-•	Supabase Storage bucket created with access policies
+•	cloudflare r2 Storage bucket created with access policies
 •	GitHub Actions CI/CD: lint + test + deploy to Vercel (web) and Railway (API)
 •	Figma design system: color tokens, typography, core components
 

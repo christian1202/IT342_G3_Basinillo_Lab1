@@ -122,7 +122,7 @@ public class Shipment {
     @Enumerated(EnumType.STRING)
     @Column(name = "lane_status", nullable = false, length = 10)
     @Builder.Default
-    private LaneStatus laneStatus = LaneStatus.NONE;
+    private LaneStatus laneStatus = LaneStatus.PENDING;
 
     /** BOC-assigned reference number upon lodgment acceptance. */
     @Column(name = "entry_number", length = 50)
@@ -171,6 +171,10 @@ public class Shipment {
     @Column(name = "updated_at")
     @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    /** Soft delete timestamp — null means the record is active. */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @PreUpdate
     protected void onUpdate() {

@@ -16,14 +16,12 @@ import ShipmentForm from "@/components/shipments/ShipmentForm";
 
 /* ================================================================== */
 /*  ShipmentDashboard                                                  */
-/*  Displays the current user's shipments inside the DashboardLayout.  */
+/*  Displays all shipments (org-scoped by backend) with CRUD actions.  */
 /* ================================================================== */
 
 export default function ShipmentDashboard(): React.JSX.Element {
-  /* ---- resolve internal DB userId via Clerk → backend sync ---- */
-  const { dbUserId: userId } = useDbUser();
+  const { dbUserId: brokerId } = useDbUser();
 
-  /* ---- shipment hook ---- */
   const {
     shipments,
     isLoading,
@@ -33,29 +31,22 @@ export default function ShipmentDashboard(): React.JSX.Element {
     removeShipment,
   } = useShipments();
 
-  /* ---- modal & edit state ---- */
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<IShipment | null>(null);
 
-  /* ---- load shipments once userId is known ---- */
+  /* Load shipments on mount */
   useEffect(() => {
-    if (!userId) return;
-    loadShipments(userId);
-  }, [userId, loadShipments]);
+    loadShipments();
+  }, [loadShipments]);
 
-  /* ================================================================ */
-  /*  EVENT HANDLERS                                                   */
-  /* ================================================================ */
-
+  /* ---- Event Handlers ---- */
   const handleRetry = useCallback(() => refetch(), [refetch]);
 
-  /** Opens modal in "Create" mode (clears editingItem) */
   const handleOpenCreateModal = useCallback(() => {
     setEditingItem(null);
     setIsModalOpen(true);
   }, []);
 
-  /** Opens modal in "Edit" mode (sets editingItem) */
   const handleOpenEditModal = useCallback((shipment: IShipment) => {
     setEditingItem(shipment);
     setIsModalOpen(true);
@@ -63,7 +54,6 @@ export default function ShipmentDashboard(): React.JSX.Element {
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
-    // slight delay to prevent UI flicker while modal fades out
     setTimeout(() => setEditingItem(null), 300);
   }, []);
 
@@ -80,17 +70,11 @@ export default function ShipmentDashboard(): React.JSX.Element {
     [removeShipment],
   );
 
-  /* ================================================================ */
-  /*  RENDER                                                           */
-  /* ================================================================ */
-
   return (
     <DashboardLayout>
       <div className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
-          {/* ======================================================== */}
-          {/*  Page Header                                               */}
-          {/* ======================================================== */}
+          {/* Page Header */}
           <header className="mb-8">
             <div className="flex items-center justify-between">
               <div>
@@ -98,12 +82,11 @@ export default function ShipmentDashboard(): React.JSX.Element {
                   Shipments
                 </h1>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                  Track your cargo consignments
+                  Track your cargo consignments through customs
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Create Button */}
                 <button
                   type="button"
                   onClick={handleOpenCreateModal}
@@ -113,7 +96,6 @@ export default function ShipmentDashboard(): React.JSX.Element {
                   <span className="hidden sm:inline">New Shipment</span>
                 </button>
 
-                {/* Refresh Button */}
                 <button
                   type="button"
                   onClick={handleRetry}
@@ -126,22 +108,17 @@ export default function ShipmentDashboard(): React.JSX.Element {
             </div>
           </header>
 
-          {/* ======================================================== */}
-          {/*  Content Card                                               */}
-          {/* ======================================================== */}
+          {/* Content Card */}
           <section
             aria-label="Shipment list"
             className="rounded-2xl border border-slate-200/60 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-lg dark:border-slate-700/60 dark:bg-slate-900/80 dark:shadow-slate-900/40 sm:p-8"
           >
-            {/* Loading */}
             {isLoading && <SkeletonLoader rows={4} />}
 
-            {/* Error */}
             {!isLoading && error && (
               <ErrorMessage message={error} onRetry={handleRetry} />
             )}
 
-            {/* Empty */}
             {!isLoading && !error && shipments.length === 0 && (
               <div className="flex flex-col items-center gap-4 py-12 text-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
@@ -166,12 +143,10 @@ export default function ShipmentDashboard(): React.JSX.Element {
               </div>
             )}
 
-            {/* List */}
-            {/* Clicking a card now triggers Edit Mode */}
             {!isLoading && !error && shipments.length > 0 && (
               <ShipmentList
                 shipments={shipments}
-                onCardClick={handleOpenEditModal} // <--- Wire edit handler
+                onCardClick={handleOpenEditModal}
                 onDelete={handleDelete}
               />
             )}
@@ -179,18 +154,16 @@ export default function ShipmentDashboard(): React.JSX.Element {
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/*  Create/Edit Shipment Modal                                   */}
-      {/* ============================================================ */}
+      {/* Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={editingItem ? "Edit Shipment" : "Create New Shipment"}
       >
-        {userId && (
+        {brokerId && (
           <ShipmentForm
-            userId={userId}
-            initialData={editingItem} // <--- Pass item to edit
+            brokerId={brokerId}
+            initialData={editingItem}
             onSuccess={handleFormSuccess}
             onCancel={handleCloseModal}
           />
