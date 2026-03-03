@@ -22,7 +22,7 @@ export default async function AdminLayout({
   const user = await currentUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth/sign-in");
   }
 
   /* Check admin role from Clerk publicMetadata */

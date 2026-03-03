@@ -20,7 +20,7 @@ export default function AdminPage() {
     if (!isLoaded) return;
 
     if (!user) {
-      router.push("/login");
+      router.push("/auth/sign-in");
       return;
     }
 

@@ -55,7 +55,7 @@ export default function LandingPage() {
               )}
             </button>
             <Link
-              href="/login"
+              href="/auth/sign-in"
               className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
             >
               Log in
@@ -91,7 +91,7 @@ export default function LandingPage() {
         {mobileMenuOpen && (
           <div className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg dark:border-slate-800 dark:bg-slate-950 md:hidden">
             <Link
-              href="/login"
+              href="/auth/sign-in"
               className="block rounded-lg px-4 py-2 text-base font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Log in
@@ -127,7 +127,7 @@ export default function LandingPage() {
 
             <div className="mt-10 flex justify-center gap-4">
               <Link
-                href="/login"
+                href="/auth/sign-in"
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3.5 text-base font-semibold text-white shadow-xl transition-all hover:bg-slate-800 hover:scale-105 active:scale-95 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
               >
                 Get Started <ArrowRight className="h-4 w-4" />

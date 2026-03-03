@@ -35,7 +35,7 @@ export default function DashboardLayout({
   /* ---- handlers ---- */
   const handleLogout = useCallback(async () => {
     await signOut();
-    router.push("/login");
+    router.push("/auth/sign-in");
   }, [signOut, router]);
 
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
