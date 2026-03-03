@@ -16,6 +16,6 @@ jobs:
       - name: Deploy to Railway
         # We use GitHub's 'defaults' logic to handle the directory
         working-directory: ./backend/basinillo
-        run: railway deploy
+        run: railway deploy --project ${{ secrets.RAILWAY_PROJECT_ID }} --service ${{ secrets.RAILWAY_SERVICE_ID }}
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
