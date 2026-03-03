@@ -14,7 +14,8 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway
-        # We target your specific service name and the correct folder
-        run: railway deploy --service efficient-learning --working-directory ./backend/basinillo
+        # We use GitHub's 'defaults' logic to handle the directory
+        working-directory: ./backend/basinillo
+        run: railway deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
