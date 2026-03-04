@@ -5,8 +5,9 @@ import type {
   IUpdateShipmentPayload,
   IDemurrageStatus,
   IServiceResult,
+  ShipmentStatus,
+  LaneStatus,
 } from "@/types/database";
-import type { ShipmentStatus, LaneStatus } from "@portkey/shared-types";
 
 /* ================================================================== */
 /*  Shipment Service                                                   */
@@ -20,18 +21,26 @@ const API_URL = (
 /**
  * Helper to make authenticated API calls.
  * Wraps fetch with standard error handling → IServiceResult.
+ * Includes the Clerk JWT as a Bearer token when provided.
  */
 async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
+  token?: string | null,
 ): Promise<IServiceResult<T>> {
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+    };
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_URL}${path}`, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -64,11 +73,13 @@ async function apiFetch<T>(
 
 export async function createShipment(
   payload: ICreateShipmentPayload,
+  token?: string | null,
 ): Promise<IServiceResult<IShipment>> {
-  return apiFetch<IShipment>("/api/shipments", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return apiFetch<IShipment>(
+    "/api/shipments",
+    { method: "POST", body: JSON.stringify(payload) },
+    token,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -86,6 +97,7 @@ export interface ShipmentFilters {
 
 export async function fetchShipments(
   filters?: ShipmentFilters,
+  token?: string | null,
 ): Promise<IServiceResult<IShipment[]>> {
   const params = new URLSearchParams();
   if (filters) {
@@ -94,16 +106,7 @@ export async function fetchShipments(
     });
   }
   const query = params.toString() ? `?${params.toString()}` : "";
-  return apiFetch<IShipment[]>(`/api/shipments${query}`);
-}
-
-/**
- * @deprecated Use fetchShipments() instead — this wraps the same endpoint.
- */
-export async function fetchShipmentsByUser(
-  _userId: string,
-): Promise<IServiceResult<IShipment[]>> {
-  return fetchShipments();
+  return apiFetch<IShipment[]>(`/api/shipments${query}`, {}, token);
 }
 
 /* ------------------------------------------------------------------ */
@@ -112,8 +115,9 @@ export async function fetchShipmentsByUser(
 
 export async function fetchShipmentById(
   shipmentId: string,
+  token?: string | null,
 ): Promise<IServiceResult<IShipmentDetail>> {
-  return apiFetch<IShipmentDetail>(`/api/shipments/${shipmentId}`);
+  return apiFetch<IShipmentDetail>(`/api/shipments/${shipmentId}`, {}, token);
 }
 
 /* ------------------------------------------------------------------ */
@@ -123,11 +127,13 @@ export async function fetchShipmentById(
 export async function updateShipment(
   shipmentId: string,
   payload: IUpdateShipmentPayload,
+  token?: string | null,
 ): Promise<IServiceResult<IShipment>> {
-  return apiFetch<IShipment>(`/api/shipments/${shipmentId}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return apiFetch<IShipment>(
+    `/api/shipments/${shipmentId}`,
+    { method: "PUT", body: JSON.stringify(payload) },
+    token,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -137,11 +143,13 @@ export async function updateShipment(
 export async function updateShipmentStatus(
   shipmentId: string,
   status: ShipmentStatus,
+  token?: string | null,
 ): Promise<IServiceResult<IShipment>> {
-  return apiFetch<IShipment>(`/api/shipments/${shipmentId}/status`, {
-    method: "PATCH",
-    body: JSON.stringify({ status }),
-  });
+  return apiFetch<IShipment>(
+    `/api/shipments/${shipmentId}/status`,
+    { method: "PATCH", body: JSON.stringify({ status }) },
+    token,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -151,11 +159,13 @@ export async function updateShipmentStatus(
 export async function updateShipmentLane(
   shipmentId: string,
   laneStatus: LaneStatus,
+  token?: string | null,
 ): Promise<IServiceResult<IShipment>> {
-  return apiFetch<IShipment>(`/api/shipments/${shipmentId}/lane`, {
-    method: "PATCH",
-    body: JSON.stringify({ laneStatus }),
-  });
+  return apiFetch<IShipment>(
+    `/api/shipments/${shipmentId}/lane`,
+    { method: "PATCH", body: JSON.stringify({ laneStatus }) },
+    token,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -164,10 +174,13 @@ export async function updateShipmentLane(
 
 export async function deleteShipment(
   shipmentId: string,
+  token?: string | null,
 ): Promise<IServiceResult<boolean>> {
-  const result = await apiFetch<void>(`/api/shipments/${shipmentId}`, {
-    method: "DELETE",
-  });
+  const result = await apiFetch<void>(
+    `/api/shipments/${shipmentId}`,
+    { method: "DELETE" },
+    token,
+  );
   if (result.error) return { data: null, error: result.error };
   return { data: true, error: null };
 }
@@ -178,8 +191,11 @@ export async function deleteShipment(
 
 export async function fetchDemurrageStatus(
   shipmentId: string,
+  token?: string | null,
 ): Promise<IServiceResult<IDemurrageStatus>> {
   return apiFetch<IDemurrageStatus>(
     `/api/shipments/${shipmentId}/demurrage-status`,
+    {},
+    token,
   );
 }

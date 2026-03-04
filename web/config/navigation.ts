@@ -2,7 +2,8 @@ import {
   LucideIcon,
   LayoutDashboard,
   Ship,
-  Activity,
+  FileText,
+  Bot,
   Settings,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Shipments", href: "/shipments", icon: Ship },
-  { label: "Shipment Analysis", href: "/analytics", icon: Activity },
+  { label: "Document Vault", href: "/dashboard/documents", icon: FileText },
+  { label: "Compliance Copilot", href: "/analytics", icon: Bot },
   { label: "Settings", href: "/settings", icon: Settings },
 ];

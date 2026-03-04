@@ -3,24 +3,39 @@
 /*  Mirrors the Spring Boot backend DTOs for strict type safety.       */
 /* ================================================================== */
 
-import {
-  ShipmentStatus,
-  LaneStatus,
-  DocumentType,
-  OcrStatus,
-  DemurrageUrgency,
-  AuditAction,
-} from "@portkey/shared-types";
+/* ------------------------------------------------------------------ */
+/*  Enum Types (mirrors Spring Boot entity enums)                      */
+/* ------------------------------------------------------------------ */
 
-// Re-export enums so consumers can import from a single location
-export {
-  ShipmentStatus,
-  LaneStatus,
-  DocumentType,
-  OcrStatus,
-  DemurrageUrgency,
-  AuditAction,
-};
+/** 5-stage lifecycle: ARRIVED → LODGED → ASSESSED → PAID → RELEASED */
+export type ShipmentStatus =
+  | "ARRIVED"
+  | "LODGED"
+  | "ASSESSED"
+  | "PAID"
+  | "RELEASED";
+
+/** BOC lane assignment */
+export type LaneStatus = "PENDING" | "GREEN" | "YELLOW" | "RED";
+
+export type DocumentType =
+  | "BILL_OF_LADING"
+  | "COMMERCIAL_INVOICE"
+  | "PACKING_LIST"
+  | "IMPORT_PERMIT"
+  | "CERTIFICATE_OF_ORIGIN"
+  | "OTHER";
+
+export type OcrStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+
+export type DemurrageUrgency = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type AuditAction =
+  | "CREATED"
+  | "UPDATED"
+  | "STATUS_CHANGED"
+  | "DELETED"
+  | "DOCUMENT_UPLOADED";
 
 /* ------------------------------------------------------------------ */
 /*  Shared Types                                                       */

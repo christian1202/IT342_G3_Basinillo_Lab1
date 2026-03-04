@@ -2,104 +2,107 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Ship, AlertTriangle, Package, Users } from "lucide-react";
+import { Bell, Search } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+
 import { useShipments } from "@/hooks/useShipments";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
-import ShipmentList from "@/components/shipments/ShipmentList";
+import DemurrageWatch from "@/components/dashboard/DemurrageWatch";
+import ActiveShipmentsTable from "@/components/dashboard/ActiveShipmentsTable";
 import type { IShipment } from "@/types/database";
 
 /* ================================================================== */
-/*  Dashboard Overview                                                 */
-/*  Shows summary metrics + shipments sorted by demurrage urgency.     */
+/*  Dashboard Overview Page                                            */
+/*  Layout: Header → Stat Cards → Demurrage Watch → Active Shipments  */
 /* ================================================================== */
-
-/** Sort helper: most urgent doomsday first, nulls last. */
-function sortByDemurrageUrgency(a: IShipment, b: IShipment): number {
-  if (!a.doomsdayDate && !b.doomsdayDate) return 0;
-  if (!a.doomsdayDate) return 1;
-  if (!b.doomsdayDate) return -1;
-  return (
-    new Date(a.doomsdayDate).getTime() - new Date(b.doomsdayDate).getTime()
-  );
-}
 
 export default function DashboardOverviewPage() {
   const router = useRouter();
-
+  const { user } = useUser();
   const { shipments, isLoading, error, loadShipments } = useShipments();
 
   useEffect(() => {
     loadShipments();
   }, [loadShipments]);
 
-  const sortedShipments = [...shipments]
-    .filter((s) => s.status !== "RELEASED")
-    .sort(sortByDemurrageUrgency);
-
-  const handleCardClick = (shipment: IShipment) => {
+  const handleShipmentAction = (shipment: IShipment) => {
     router.push(`/shipments/${shipment.id}`);
   };
 
   return (
     <DashboardLayout>
-      <div className="px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          {/* Page Header */}
-          <header className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
-              Overview
-            </h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Customs clearance at a glance — sorted by demurrage urgency
-            </p>
+      <div className="px-6 py-6 lg:px-8">
+        <div className="mx-auto max-w-[1400px] space-y-8">
+          {/* ======================================================== */}
+          {/*  Page Header                                              */}
+          {/* ======================================================== */}
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white sm:text-3xl">
+                Overview
+              </h1>
+              <p className="mt-1 text-sm text-slate-400">
+                Welcome back, here&apos;s what&apos;s happening with your
+                shipments today.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search bill of lading..."
+                  className="h-9 w-56 rounded-lg border bg-transparent pl-9 pr-3 text-sm text-slate-300 placeholder-slate-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+                  style={{ borderColor: "#1F2937" }}
+                />
+              </div>
+
+              {/* Notification Bell */}
+              <button
+                type="button"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors hover:bg-white/5"
+                style={{ borderColor: "#1F2937" }}
+                aria-label="Notifications"
+              >
+                <Bell className="h-4 w-4 text-slate-400" />
+              </button>
+            </div>
           </header>
 
-          {/* Metrics */}
-          <section className="mb-8">
-            <DashboardMetrics shipments={shipments} isLoading={isLoading} />
-          </section>
+          {/* ======================================================== */}
+          {/*  Error State                                              */}
+          {/* ======================================================== */}
+          {!isLoading && error && (
+            <div
+              className="rounded-xl border border-red-500/30 px-4 py-3 text-sm text-red-400"
+              style={{ backgroundColor: "rgba(239, 68, 68, 0.08)" }}
+            >
+              {error}
+            </div>
+          )}
 
-          {/* Active Shipments — Sorted by Urgency */}
-          <section>
-            <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-200">
-              Active Shipments
-            </h2>
+          {/* ======================================================== */}
+          {/*  Stat Cards                                               */}
+          {/* ======================================================== */}
+          <DashboardMetrics shipments={shipments} isLoading={isLoading} />
 
-            {isLoading && (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-28 animate-pulse rounded-xl border border-slate-200/60 bg-white/80 dark:border-slate-700/60 dark:bg-slate-900/80"
-                  />
-                ))}
-              </div>
-            )}
+          {/* ======================================================== */}
+          {/*  Demurrage Watch                                          */}
+          {/* ======================================================== */}
+          <DemurrageWatch
+            shipments={shipments}
+            isLoading={isLoading}
+            onViewAll={() => router.push("/shipments")}
+            onAction={handleShipmentAction}
+          />
 
-            {!isLoading && error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
-                {error}
-              </div>
-            )}
-
-            {!isLoading && !error && sortedShipments.length === 0 && (
-              <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <Ship className="h-10 w-10 text-slate-300 dark:text-slate-600" />
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  No active shipments. All clear!
-                </p>
-              </div>
-            )}
-
-            {!isLoading && !error && sortedShipments.length > 0 && (
-              <ShipmentList
-                shipments={sortedShipments}
-                onCardClick={handleCardClick}
-                limit={10}
-              />
-            )}
-          </section>
+          {/* ======================================================== */}
+          {/*  Active Shipments Table                                   */}
+          {/* ======================================================== */}
+          <ActiveShipmentsTable shipments={shipments} isLoading={isLoading} />
         </div>
       </div>
     </DashboardLayout>

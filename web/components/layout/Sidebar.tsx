@@ -2,29 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Anchor, LogOut, X, LayoutDashboard } from "lucide-react";
+import {
+  Anchor,
+  LogOut,
+  X,
+  Plus,
+  LayoutDashboard,
+  Settings as SettingsIcon,
+} from "lucide-react";
 
 import { NAV_ITEMS } from "@/config/navigation";
 
 /* ================================================================== */
 /*  Sidebar                                                            */
-/*  Renders the PortKey brand mark, navigation links, and a logout     */
-/*  button. Active link is highlighted based on the current pathname.  */
-/*                                                                     */
-/*  Used in two modes:                                                 */
-/*    1. Desktop — always visible (static sidebar).                    */
-/*    2. Mobile  — rendered inside a slide-over drawer.                */
+/*  PortKey brand, navigation, "New Shipment" CTA, and user profile.   */
+/*  Design tokens: bg = #0D1221, active = #3B82F6                     */
 /* ================================================================== */
 
 interface SidebarProps {
-  /** Callback for the logout action. */
   onLogout: () => void;
-  /** If true, renders a close (X) button for mobile drawer mode. */
   isMobile?: boolean;
-  /** Closes the mobile drawer when called. */
   onClose?: () => void;
-  /** If true, shows admin-specific navigation items. */
   isAdmin?: boolean;
+  userName?: string;
+  userRole?: string;
 }
 
 export default function Sidebar({
@@ -32,26 +33,36 @@ export default function Sidebar({
   isMobile = false,
   onClose,
   isAdmin = false,
+  userName = "Alex Morgan",
+  userRole = "Logistics Manager",
 }: SidebarProps): React.JSX.Element {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full flex-col bg-white dark:bg-slate-900">
+    <aside
+      className="flex h-full flex-col"
+      style={{ backgroundColor: "#0D1221" }}
+    >
       {/* ============================================================ */}
-      {/*  Brand + Mobile Close                                         */}
+      {/*  Brand                                                       */}
       {/* ============================================================ */}
-      <div className="flex items-center justify-between px-5 py-6">
+      <div className="flex items-center justify-between px-5 pt-6 pb-2">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2.5"
+          className="flex items-center gap-3"
           onClick={onClose}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-500/30">
-            <Anchor className="h-4.5 w-4.5 text-white" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/30">
+            <Anchor className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-bold text-slate-900 dark:text-white">
-            PortKey
-          </span>
+          <div>
+            <span className="block text-base font-bold text-white">
+              PortKey
+            </span>
+            <span className="block text-[11px] text-slate-500">
+              Customs Dashboard
+            </span>
+          </div>
         </Link>
 
         {isMobile && onClose && (
@@ -59,7 +70,7 @@ export default function Sidebar({
             type="button"
             onClick={onClose}
             aria-label="Close navigation"
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -67,23 +78,9 @@ export default function Sidebar({
       </div>
 
       {/* ============================================================ */}
-      {/*  Navigation Links                                              */}
+      {/*  Navigation Links                                             */}
       {/* ============================================================ */}
-      <nav className="flex-1 space-y-1 px-3">
-        {isAdmin && (
-          <Link
-            href="/admin"
-            onClick={onClose}
-            className={`
-                flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors mb-4
-                bg-indigo-600 text-white shadow-md shadow-indigo-200 hover:bg-indigo-700 dark:shadow-none
-              `}
-          >
-            <LayoutDashboard className="h-4.5 w-4.5 shrink-0 text-white" />
-            Command Center
-          </Link>
-        )}
-
+      <nav className="mt-6 flex-1 space-y-1 px-3">
         {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -93,20 +90,16 @@ export default function Sidebar({
               href={href}
               onClick={onClose}
               className={`
-                flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors
+                flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all
                 ${
                   isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
+                    : "text-slate-400 hover:bg-white/5 hover:text-white"
                 }
               `}
             >
               <Icon
-                className={`h-4.5 w-4.5 shrink-0 ${
-                  isActive
-                    ? "text-indigo-600 dark:text-indigo-400"
-                    : "text-slate-400 dark:text-slate-500"
-                }`}
+                className={`h-[18px] w-[18px] shrink-0 ${isActive ? "text-white" : "text-slate-500"}`}
               />
               {label}
             </Link>
@@ -115,17 +108,34 @@ export default function Sidebar({
       </nav>
 
       {/* ============================================================ */}
-      {/*  Logout                                                        */}
+      {/*  New Shipment CTA                                             */}
       {/* ============================================================ */}
-      <div className="border-t border-slate-200 px-3 py-4 dark:border-slate-800">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+      <div className="px-3 pb-3">
+        <Link
+          href="/shipments"
+          onClick={onClose}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-all hover:bg-blue-500"
         >
-          <LogOut className="h-4.5 w-4.5 shrink-0" />
-          Logout
-        </button>
+          <Plus className="h-4 w-4" />
+          New Shipment
+        </Link>
+      </div>
+
+      {/* ============================================================ */}
+      {/*  User Profile                                                 */}
+      {/* ============================================================ */}
+      <div className="border-t border-white/5 px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-bold text-white">
+            {userName.charAt(0)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white">
+              {userName}
+            </p>
+            <p className="truncate text-xs text-slate-500">{userRole}</p>
+          </div>
+        </div>
       </div>
     </aside>
   );

@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { useAuth } from "@clerk/nextjs";
 import type {
   IShipment,
   IShipmentDetail,
   ICreateShipmentPayload,
   IUpdateShipmentPayload,
+  ShipmentStatus,
+  LaneStatus,
 } from "@/types/database";
 import {
   createShipment,
@@ -18,14 +21,16 @@ import {
   fetchDemurrageStatus,
 } from "@/services/shipmentService";
 import type { ShipmentFilters } from "@/services/shipmentService";
-import type { ShipmentStatus, LaneStatus } from "@portkey/shared-types";
 
 /* ================================================================== */
 /*  useShipments                                                       */
 /*  Custom hook for all shipment operations against the backend API.   */
+/*  Automatically obtains the Clerk JWT and passes it to every call.   */
 /* ================================================================== */
 
 export function useShipments() {
+  const { getToken } = useAuth();
+
   /* ----------------------- state ---------------------------------- */
   const [shipments, setShipments] = useState<IShipment[]>([]);
   const [shipment, setShipment] = useState<IShipmentDetail | null>(null);
@@ -37,24 +42,28 @@ export function useShipments() {
 
   /* ----------------------- LIST ----------------------------------- */
 
-  const loadShipments = useCallback(async (filters?: ShipmentFilters) => {
-    lastFiltersRef.current = filters;
-    setIsLoading(true);
-    setError(null);
+  const loadShipments = useCallback(
+    async (filters?: ShipmentFilters) => {
+      lastFiltersRef.current = filters;
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const result = await fetchShipments(filters);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const token = await getToken();
+        const result = await fetchShipments(filters, token);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setShipments(result.data ?? []);
+      } catch {
+        setError("An unexpected error occurred while loading shipments.");
+      } finally {
+        setIsLoading(false);
       }
-      setShipments(result.data ?? []);
-    } catch {
-      setError("An unexpected error occurred while loading shipments.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [getToken],
+  );
 
   /* ----------------------- REFETCH -------------------------------- */
 
@@ -64,23 +73,27 @@ export function useShipments() {
 
   /* ----------------------- SINGLE --------------------------------- */
 
-  const loadShipment = useCallback(async (shipmentId: string) => {
-    setIsLoading(true);
-    setError(null);
+  const loadShipment = useCallback(
+    async (shipmentId: string) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const result = await fetchShipmentById(shipmentId);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const token = await getToken();
+        const result = await fetchShipmentById(shipmentId, token);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setShipment(result.data);
+      } catch {
+        setError("An unexpected error occurred while loading the shipment.");
+      } finally {
+        setIsLoading(false);
       }
-      setShipment(result.data);
-    } catch {
-      setError("An unexpected error occurred while loading the shipment.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [getToken],
+  );
 
   /* ----------------------- CREATE --------------------------------- */
 
@@ -90,7 +103,8 @@ export function useShipments() {
       setError(null);
 
       try {
-        const result = await createShipment(payload);
+        const token = await getToken();
+        const result = await createShipment(payload, token);
         if (result.error) {
           setError(result.error);
           return null;
@@ -106,7 +120,7 @@ export function useShipments() {
         setIsLoading(false);
       }
     },
-    [],
+    [getToken],
   );
 
   /* ----------------------- UPDATE --------------------------------- */
@@ -120,7 +134,8 @@ export function useShipments() {
       setError(null);
 
       try {
-        const result = await updateShipment(shipmentId, payload);
+        const token = await getToken();
+        const result = await updateShipment(shipmentId, payload, token);
         if (result.error) {
           setError(result.error);
           return null;
@@ -141,7 +156,7 @@ export function useShipments() {
         setIsLoading(false);
       }
     },
-    [],
+    [getToken],
   );
 
   /* ----------------------- STATUS --------------------------------- */
@@ -150,7 +165,8 @@ export function useShipments() {
     async (shipmentId: string, status: ShipmentStatus): Promise<boolean> => {
       setError(null);
       try {
-        const result = await updateShipmentStatus(shipmentId, status);
+        const token = await getToken();
+        const result = await updateShipmentStatus(shipmentId, status, token);
         if (result.error) {
           setError(result.error);
           return false;
@@ -165,7 +181,7 @@ export function useShipments() {
         return false;
       }
     },
-    [],
+    [getToken],
   );
 
   /* ----------------------- LANE ----------------------------------- */
@@ -174,7 +190,8 @@ export function useShipments() {
     async (shipmentId: string, laneStatus: LaneStatus): Promise<boolean> => {
       setError(null);
       try {
-        const result = await updateShipmentLane(shipmentId, laneStatus);
+        const token = await getToken();
+        const result = await updateShipmentLane(shipmentId, laneStatus, token);
         if (result.error) {
           setError(result.error);
           return false;
@@ -189,7 +206,7 @@ export function useShipments() {
         return false;
       }
     },
-    [],
+    [getToken],
   );
 
   /* ----------------------- DELETE --------------------------------- */
@@ -200,7 +217,8 @@ export function useShipments() {
       setError(null);
 
       try {
-        const result = await deleteShipment(shipmentId);
+        const token = await getToken();
+        const result = await deleteShipment(shipmentId, token);
         if (result.error) {
           setError(result.error);
           return false;
@@ -216,19 +234,23 @@ export function useShipments() {
         setIsLoading(false);
       }
     },
-    [],
+    [getToken],
   );
 
   /* ----------------------- DEMURRAGE ------------------------------ */
 
-  const getDemurrageStatus = useCallback(async (shipmentId: string) => {
-    const result = await fetchDemurrageStatus(shipmentId);
-    if (result.error) {
-      setError(result.error);
-      return null;
-    }
-    return result.data;
-  }, []);
+  const getDemurrageStatus = useCallback(
+    async (shipmentId: string) => {
+      const token = await getToken();
+      const result = await fetchDemurrageStatus(shipmentId, token);
+      if (result.error) {
+        setError(result.error);
+        return null;
+      }
+      return result.data;
+    },
+    [getToken],
+  );
 
   /* ----------------------- RETURN --------------------------------- */
 

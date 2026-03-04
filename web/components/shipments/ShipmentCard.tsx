@@ -9,7 +9,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { IShipment } from "@/types/database";
-import { ShipmentStatus, LaneStatus } from "@portkey/shared-types";
 
 /* ================================================================== */
 /*  STATUS STYLING MAP                                                 */

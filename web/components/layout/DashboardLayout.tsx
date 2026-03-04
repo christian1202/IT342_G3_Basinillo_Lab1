@@ -9,10 +9,8 @@ import Sidebar from "@/components/layout/Sidebar";
 
 /* ================================================================== */
 /*  DashboardLayout                                                    */
-/*  The "shell" that wraps every authenticated page.                   */
-/*                                                                     */
-/*  Auth guard: Clerk middleware handles route protection.              */
-/*  Role check: Uses Clerk's publicMetadata.role for admin redirect.   */
+/*  The shell wrapping every authenticated page.                       */
+/*  Design: #0A0F1E main bg, #0D1221 sidebar bg, 240px sidebar width. */
 /* ================================================================== */
 
 interface DashboardLayoutProps {
@@ -26,13 +24,11 @@ export default function DashboardLayout({
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
 
-  /* ---- mobile drawer state ---- */
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  /* ---- derive admin status from Clerk metadata ---- */
   const isAdmin = (user?.publicMetadata?.role as string) === "admin";
+  const userName = user?.fullName || user?.firstName || "User";
 
-  /* ---- handlers ---- */
   const handleLogout = useCallback(async () => {
     await signOut();
     router.push("/auth/sign-in");
@@ -41,79 +37,74 @@ export default function DashboardLayout({
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
-  /* ================================================================ */
-  /*  EARLY RETURN — Auth Loading                                      */
-  /* ================================================================ */
-
+  /* Loading State */
   if (!isLoaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ backgroundColor: "#0A0F1E" }}
+      >
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading…</p>
         </div>
       </div>
     );
   }
 
-  /* ================================================================ */
-  /*  MAIN RENDER                                                      */
-  /* ================================================================ */
-
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
-      {/* ============================================================ */}
-      {/*  Desktop Sidebar (hidden on mobile)                           */}
-      {/* ============================================================ */}
-      <div className="hidden w-[250px] shrink-0 border-r border-slate-200 dark:border-slate-800 lg:block">
-        <Sidebar onLogout={handleLogout} isAdmin={isAdmin} />
+    <div
+      className="flex h-screen overflow-hidden"
+      style={{ backgroundColor: "#0A0F1E" }}
+    >
+      {/* Desktop Sidebar */}
+      <div className="hidden w-[240px] shrink-0 lg:block">
+        <Sidebar
+          onLogout={handleLogout}
+          isAdmin={isAdmin}
+          userName={userName}
+        />
       </div>
 
-      {/* ============================================================ */}
-      {/*  Mobile Drawer Overlay                                        */}
-      {/* ============================================================ */}
+      {/* Mobile Drawer */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={closeDrawer}
             aria-hidden="true"
           />
-
-          {/* Drawer panel */}
           <div className="absolute inset-y-0 left-0 w-[280px] shadow-2xl">
             <Sidebar
               onLogout={handleLogout}
               isMobile
               onClose={closeDrawer}
               isAdmin={isAdmin}
+              userName={userName}
             />
           </div>
         </div>
       )}
 
-      {/* ============================================================ */}
-      {/*  Right Column (header + content)                              */}
-      {/* ============================================================ */}
+      {/* Right Column */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ---- Top Header (mobile only) ---- */}
-        <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:hidden">
+        {/* Mobile Header */}
+        <header
+          className="flex h-14 shrink-0 items-center border-b border-white/5 px-4 lg:hidden"
+          style={{ backgroundColor: "#0D1221" }}
+        >
           <button
             type="button"
             onClick={openDrawer}
             aria-label="Open navigation menu"
-            className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
           >
             <Menu className="h-5 w-5" />
           </button>
-
-          <span className="ml-3 text-sm font-bold text-slate-900 dark:text-white">
-            PortKey
-          </span>
+          <span className="ml-3 text-sm font-bold text-white">PortKey</span>
         </header>
 
-        {/* ---- Scrollable main content ---- */}
+        {/* Main Content */}
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
