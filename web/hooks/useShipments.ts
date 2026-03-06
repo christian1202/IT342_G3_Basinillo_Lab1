@@ -1,250 +1,110 @@
+/* ================================================================== */
+/*  PORTKEY — useShipments Hook                                        */
+/*  Manages shipment data fetching and mutations.                      */
+/* ================================================================== */
+
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
+import * as shipmentApi from "@/services/shipment-service";
 import type {
-  IShipment,
-  ICreateShipmentPayload,
-  IUpdateShipmentPayload,
-} from "@/types/database";
-import {
-  createShipment,
-  fetchShipmentsByUser,
-  fetchShipmentById,
-  updateShipment,
-  deleteShipment,
-} from "@/services/shipmentService";
-
-/* ================================================================== */
-/*  useShipments                                                       */
-/*  Custom hook for all shipment operations.                           */
-/*                                                                     */
-/*  Exposes:                                                           */
-/*    • shipments / shipment   — data payloads                         */
-/*    • isLoading              — for skeletons / spinners              */
-/*    • error                  — nullable error string                 */
-/*    • loadShipments()        — fetch list by user                    */
-/*    • loadShipment()         — fetch single by id                    */
-/*    • refetch()              — re-run last loadShipments call        */
-/*    • addShipment()          — create new                            */
-/*    • editShipment()         — update existing                       */
-/*    • removeShipment()       — delete                                */
-/* ================================================================== */
+  Shipment,
+  ShipmentFilters,
+  CreateShipmentRequest,
+  UpdateShipmentStatusRequest,
+  ShipmentAnalysis,
+} from "@/types";
+import toast from "react-hot-toast";
 
 export function useShipments() {
-  /* ----------------------- state ---------------------------------- */
-  const [shipments, setShipments] = useState<IShipment[]>([]);
-  const [shipment, setShipment] = useState<IShipment | null>(null);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [analysis, setAnalysis] = useState<ShipmentAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Ref that remembers the last userId passed to loadShipments.
-   * Used by refetch() so we can re-run the query without the
-   * caller needing to pass the userId again.
-   */
-  const lastUserIdRef = useRef<string | null>(null);
-
-  /* ----------------------- LIST ----------------------------------- */
-
-  /**
-   * Fetches all shipments belonging to the given user (newest first).
-   * Also stores the userId so refetch() can repeat the call.
-   *
-   * @param userId - UUID of the shipment owner
-   */
-  const loadShipments = useCallback(async (userId: string) => {
-    lastUserIdRef.current = userId;
+  /* ---------------------- Fetch list ---------------------- */
+  const fetchShipments = useCallback(async (filters?: ShipmentFilters) => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const result = await fetchShipmentsByUser(userId);
-
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      setShipments(result.data ?? []);
-    } catch (unexpected) {
-      setError("An unexpected error occurred while loading shipments.");
+      const data = await shipmentApi.getShipments(filters);
+      setShipments(data);
+    } catch (err: any) {
+      setError(err.message || "Failed to load shipments");
+      toast.error(err.message || "Failed to load shipments");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  /* ----------------------- REFETCH -------------------------------- */
-
-  /**
-   * Re-runs the last loadShipments call using the stored userId.
-   * Ideal for refreshing the list after a create, update, or delete
-   * without requiring the caller to track the userId.
-   */
-  const refetch = useCallback(async () => {
-    if (!lastUserIdRef.current) return;
-    await loadShipments(lastUserIdRef.current);
-  }, [loadShipments]);
-
-  /* ----------------------- SINGLE --------------------------------- */
-
-  /**
-   * Fetches a single shipment by its database ID.
-   * Use this when navigating to a shipment detail page.
-   *
-   * @param shipmentId - UUID of the shipment
-   */
-  const loadShipment = useCallback(async (shipmentId: string) => {
-    setIsLoading(true);
-    setError(null);
-
+  /* ---------------------- Analysis ---------------------- */
+  const fetchAnalysis = useCallback(async () => {
     try {
-      const result = await fetchShipmentById(shipmentId);
-
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      setShipment(result.data);
-    } catch (unexpected) {
-      setError("An unexpected error occurred while loading the shipment.");
-    } finally {
-      setIsLoading(false);
+      const data = await shipmentApi.getShipmentAnalysis();
+      setAnalysis(data);
+    } catch (err: any) {
+      console.error("Analysis load failed:", err);
     }
   }, []);
 
-  /* ----------------------- CREATE --------------------------------- */
+  /* ---------------------- Mutations ---------------------- */
+  const createShipment = async (payload: CreateShipmentRequest) => {
+    try {
+      const newShipment = await shipmentApi.createShipment(payload);
+      setShipments((prev) => [newShipment, ...prev]);
+      toast.success("Shipment created successfully");
+      return newShipment;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create shipment");
+      throw err;
+    }
+  };
 
-  /**
-   * Creates a new shipment and appends it to the local list.
-   * Returns the created shipment on success, or null on failure.
-   *
-   * @param payload - The shipment fields to insert
-   */
-  const addShipment = useCallback(
-    async (payload: ICreateShipmentPayload): Promise<IShipment | null> => {
-      setIsLoading(true);
-      setError(null);
+  const editShipment = async (id: number, payload: Partial<CreateShipmentRequest>) => {
+    try {
+      const updated = await shipmentApi.updateShipment(id, payload);
+      setShipments((prev) => prev.map((s) => (s.id === id ? updated : s)));
+      toast.success("Shipment updated successfully");
+      return updated;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update shipment");
+      throw err;
+    }
+  };
 
-      try {
-        const result = await createShipment(payload);
+  const advanceStatus = async (id: number) => {
+    try {
+      const updated = await shipmentApi.updateShipmentStatus(id);
+      setShipments((prev) => prev.map((s) => (s.id === id ? updated : s)));
+      toast.success(`Shipment advanced to ${updated.status}`);
+      return updated;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update status");
+      throw err;
+    }
+  };
 
-        if (result.error) {
-          setError(result.error);
-          return null;
-        }
-
-        const created = result.data!;
-        setShipments((prev) => [created, ...prev]);
-        return created;
-      } catch (unexpected) {
-        setError("An unexpected error occurred while creating the shipment.");
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
-
-  /* ----------------------- UPDATE --------------------------------- */
-
-  /**
-   * Updates mutable fields on an existing shipment and patches
-   * the local list in-place so the UI reflects changes immediately.
-   *
-   * @param shipmentId - UUID of the shipment to update
-   * @param payload    - Only the fields to change
-   */
-  const editShipment = useCallback(
-    async (
-      shipmentId: string,
-      payload: IUpdateShipmentPayload,
-    ): Promise<IShipment | null> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const result = await updateShipment(shipmentId, payload);
-
-        if (result.error) {
-          setError(result.error);
-          return null;
-        }
-
-        const updated = result.data!;
-
-        /* Patch the list so the UI updates without a full refetch */
-        setShipments((prev) =>
-          prev.map((s) => (s.id === shipmentId ? updated : s)),
-        );
-
-        /* Also update the single-shipment state if it matches */
-        setShipment((prev) => (prev?.id === shipmentId ? updated : prev));
-
-        return updated;
-      } catch (unexpected) {
-        setError("An unexpected error occurred while updating the shipment.");
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
-
-  /* ----------------------- DELETE --------------------------------- */
-
-  /**
-   * Deletes a shipment and removes it from the local list.
-   * Returns true on success, false on failure.
-   *
-   * @param shipmentId - UUID of the shipment to delete
-   */
-  const removeShipment = useCallback(
-    async (shipmentId: string): Promise<boolean> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const result = await deleteShipment(shipmentId);
-
-        if (result.error) {
-          setError(result.error);
-          return false;
-        }
-
-        setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
-
-        /* Clear single-shipment state if it was the deleted one */
-        setShipment((prev) => (prev?.id === shipmentId ? null : prev));
-
-        return true;
-      } catch (unexpected) {
-        setError("An unexpected error occurred while deleting the shipment.");
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
-
-  /* ----------------------- RETURN --------------------------------- */
+  const removeShipment = async (id: number) => {
+    try {
+      await shipmentApi.deleteShipment(id);
+      setShipments((prev) => prev.filter((s) => s.id !== id));
+      toast.success("Shipment deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete shipment");
+      throw err;
+    }
+  };
 
   return {
-    /* State */
     shipments,
-    shipment,
+    analysis,
     isLoading,
     error,
-
-    /* Actions */
-    loadShipments,
-    loadShipment,
-    refetch,
-    addShipment,
+    fetchShipments,
+    fetchAnalysis,
+    createShipment,
     editShipment,
+    advanceStatus,
     removeShipment,
-  } as const;
+  };
 }

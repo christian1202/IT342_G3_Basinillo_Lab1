@@ -1,79 +1,101 @@
 package com.it342.basinillo.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.it342.basinillo.enums.Plan;
+import com.it342.basinillo.enums.Role;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
-/**
- * JPA Entity mapped to the "profiles" table in the "public" schema.
- *
- * Represents users within the PortKey system — clients, customs brokers,
- * and administrators. The primary key is the Supabase Auth user UUID;
- * it is NOT auto-generated.
- *
- * Relationships:
- *   - OneToMany → Shipment (one user can own many shipments)
- */
 @Entity
-@Table(name = "profiles", schema = "public")
-@Data
-@Builder
+@Table(name = "users")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+@Builder
+public class User implements UserDetails {
 
-    /* ------------------------------------------------------------------ */
-    /*  Primary Key                                                        */
-    /* ------------------------------------------------------------------ */
-
-    /**
-     * Matches the Supabase Auth user UUID.
-     * Not auto-generated; supplied by Supabase Auth on login/signup.
-     */
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    /* ------------------------------------------------------------------ */
-    /*  Profile Fields                                                     */
-    /* ------------------------------------------------------------------ */
-
-    @Column(name = "email")
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "full_name")
-    private String fullName;
+    private String passwordHash;
 
-    /**
-     * User role in the system: "admin", "broker", or "client".
-     * Defaults to "client" for new users.
-     */
-    @Column(name = "role")
-    private String role;
+    @Column(nullable = false)
+    private String firstName;
 
-    @Column(name = "avatar_url")
-    private String avatarUrl;
+    @Column(nullable = false)
+    private String lastName;
 
-    /* ------------------------------------------------------------------ */
-    /*  Relationships                                                      */
-    /* ------------------------------------------------------------------ */
-
-    /**
-     * All shipments belonging to this user.
-     *
-     * @JsonIgnore prevents infinite recursion when serializing User → Shipment → User.
-     * cascade = ALL so that deleting a user also removes their shipments.
-     * orphanRemoval = true cleans up detached shipment records automatically.
-     */
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Builder.Default
-    private List<Shipment> shipments = new ArrayList<>();
+    private Role role = Role.BROKER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Plan plan = Plan.FREE;
+
+    private String googleId;
+
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    // ── UserDetails contract ──────────────────────────────────
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+    }
+
+    @Override
+    public String getPassword() {
+        return passwordHash;
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    // ── Lifecycle hooks ───────────────────────────────────────
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

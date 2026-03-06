@@ -1,118 +1,104 @@
 package com.it342.basinillo.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.it342.basinillo.enums.ShipmentLane;
+import com.it342.basinillo.enums.ShipmentStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-/**
- * JPA Entity mapped to the "shipments" table.
- *
- * Represents a single shipment (cargo consignment) tracked through
- * the customs brokerage pipeline. Each shipment is uniquely identified
- * by its Bill of Lading number (bl_number).
- *
- * Relationships:
- *   - ManyToOne  → User  (the client who owns this shipment)
- *   - OneToMany  → ShipmentDocument (attached customs documents)
- */
 @Entity
 @Table(name = "shipments")
-@Data
-@Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Shipment {
 
-    /* ------------------------------------------------------------------ */
-    /*  Primary Key                                                        */
-    /* ------------------------------------------------------------------ */
-
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    /* ------------------------------------------------------------------ */
-    /*  Relationship — Owner                                               */
-    /* ------------------------------------------------------------------ */
+    // ── Ownership ────────────────────────────────────────────
 
-    /**
-     * The client/broker who owns this shipment.
-     * FetchType.LAZY avoids loading the full User object on every query.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore
     private User user;
 
-    /**
-     * Exposes the user ID for JSON serialization without loading the full User entity.
-     */
-    @Column(name = "user_id", insertable = false, updatable = false)
-    private UUID userId;
+    // ── Vessel & Voyage ──────────────────────────────────────
 
-    /* ------------------------------------------------------------------ */
-    /*  Shipment Details                                                   */
-    /* ------------------------------------------------------------------ */
-
-    /**
-     * Bill of Lading number — the primary tracking identifier in logistics.
-     * Must be unique across all shipments.
-     */
-    @Column(name = "bl_number", nullable = false, unique = true, length = 50)
-    private String blNumber;
-
-    /** Name of the vessel carrying the cargo. */
-    @Column(name = "vessel_name", length = 150)
+    @Column(nullable = false)
     private String vesselName;
 
-    /** Container identification number (e.g., "MSKU1234567"). */
-    @Column(name = "container_number", length = 50)
-    private String containerNumber;
+    private String voyageNumber;
 
-    /** Estimated Time of Arrival at the port of destination. */
-    @Column(name = "arrival_date")
-    private LocalDateTime arrivalDate;
+    private LocalDate arrivalDate;
 
-    /* ------------------------------------------------------------------ */
-    /*  Status                                                             */
-    /* ------------------------------------------------------------------ */
+    private String portOfDischarge;
 
-    /**
-     * Current lifecycle status of the shipment.
-     * Stored as a String in the database (not ordinal) for readability.
-     */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
+    // ── Client & Cargo ───────────────────────────────────────
+
+    @Column(nullable = false)
+    private String clientName;
+
+    private String containerNumbers;
+
+    private String descriptionOfGoods;
+
+    // ── Demurrage ────────────────────────────────────────────
+
     @Builder.Default
-    private ShipmentStatus status = ShipmentStatus.PENDING;
+    private Integer freeDays = 5;
 
-    /* ------------------------------------------------------------------ */
-    /*  Audit                                                              */
-    /* ------------------------------------------------------------------ */
+    private LocalDate doomsdayDate;
 
-    @Column(name = "created_at", updatable = false)
+    // ── Status & Lane ────────────────────────────────────────
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ShipmentStatus status = ShipmentStatus.ARRIVED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ShipmentLane lane = ShipmentLane.GREEN;
+
+    // ── Reference Numbers ────────────────────────────────────
+
+    private String entryNumber;
+
+    private String orNumber;
+
+    // ── Child collections ────────────────────────────────────
+
+    @OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ShipmentItem> items = new ArrayList<>();
+
+    @OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Document> documents = new ArrayList<>();
+
+    // ── Soft delete ──────────────────────────────────────────
+
+    private LocalDateTime deletedAt;
+
+    // ── Timestamps ───────────────────────────────────────────
+
+    @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    /* ------------------------------------------------------------------ */
-    /*  Relationships — Documents                                          */
-    /* ------------------------------------------------------------------ */
-
-    /**
-     * All customs documents attached to this shipment.
-     * cascade = ALL propagates persist/remove to child documents.
-     * orphanRemoval cleans up detached documents automatically.
-     */
-    @OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<ShipmentDocument> documents = new ArrayList<>();
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

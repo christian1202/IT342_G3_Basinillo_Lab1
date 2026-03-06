@@ -2,113 +2,87 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Anchor, LogOut, X } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Ship, 
+  BarChart3, 
+  Settings, 
+  Users,
+  Anchor
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Role } from "@/types";
 
-import { NAV_ITEMS } from "@/config/navigation";
-
-/* ================================================================== */
-/*  Sidebar                                                            */
-/*  Renders the PortKey brand mark, navigation links, and a logout     */
-/*  button. Active link is highlighted based on the current pathname.  */
-/*                                                                     */
-/*  Used in two modes:                                                 */
-/*    1. Desktop — always visible (static sidebar).                    */
-/*    2. Mobile  — rendered inside a slide-over drawer.                */
-/* ================================================================== */
-
-interface SidebarProps {
-  /** Callback for the logout action. */
-  onLogout: () => void;
-  /** If true, renders a close (X) button for mobile drawer mode. */
-  isMobile?: boolean;
-  /** Closes the mobile drawer when called. */
-  onClose?: () => void;
+interface NavItem {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  adminOnly?: boolean;
 }
 
-export default function Sidebar({
-  onLogout,
-  isMobile = false,
-  onClose,
-}: SidebarProps): React.JSX.Element {
+const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
+  { href: "/dashboard/shipments", icon: Ship, label: "Shipments" },
+  { href: "/dashboard/analysis", icon: BarChart3, label: "Analysis" },
+  { href: "/dashboard/admin", icon: Users, label: "User Management", adminOnly: true },
+  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+];
+
+export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const filteredItems = NAV_ITEMS.filter(
+    (item) => !item.adminOnly || user?.role === Role.ADMIN
+  );
 
   return (
-    <aside className="flex h-full flex-col bg-white dark:bg-slate-900">
-      {/* ============================================================ */}
-      {/*  Brand + Mobile Close                                         */}
-      {/* ============================================================ */}
-      <div className="flex items-center justify-between px-5 py-6">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2.5"
-          onClick={onClose}
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-500/30">
-            <Anchor className="h-4.5 w-4.5 text-white" />
-          </div>
-          <span className="text-lg font-bold text-slate-900 dark:text-white">
-            PortKey
-          </span>
-        </Link>
-
-        {isMobile && onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close navigation"
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
+    <aside className="fixed inset-y-0 left-0 z-40 w-64 border-r border-slate-200 bg-white px-4 py-8 dark:border-slate-800 dark:bg-slate-950 lg:static">
+      <div className="mb-10 flex items-center gap-3 px-2">
+        <Anchor className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+        <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          PortKey
+        </span>
       </div>
 
-      {/* ============================================================ */}
-      {/*  Navigation Links                                              */}
-      {/* ============================================================ */}
-      <nav className="flex-1 space-y-1 px-3">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+      <nav className="flex flex-col gap-2">
+        {filteredItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
           return (
             <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              className={`
-                flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors
-                ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                }
-              `}
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
+              }`}
             >
-              <Icon
-                className={`h-4.5 w-4.5 shrink-0 ${
-                  isActive
-                    ? "text-indigo-600 dark:text-indigo-400"
-                    : "text-slate-400 dark:text-slate-500"
-                }`}
-              />
-              {label}
+              <item.icon className="h-5 w-5 shrink-0" />
+              {item.label}
             </Link>
           );
         })}
       </nav>
-
-      {/* ============================================================ */}
-      {/*  Logout                                                        */}
-      {/* ============================================================ */}
-      <div className="border-t border-slate-200 px-3 py-4 dark:border-slate-800">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
-        >
-          <LogOut className="h-4.5 w-4.5 shrink-0" />
-          Logout
-        </button>
+      
+      {/* Spacer pushing footer down */}
+      <div className="flex-1" />
+      
+      <div className="mt-8 rounded-xl bg-slate-50 px-4 py-5 dark:bg-slate-900">
+        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 dark:text-slate-400">
+          Plan Status
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-900 dark:text-white">
+            {user?.plan || "FREE"}
+          </span>
+          {user?.plan !== "PRO" && (
+            <button className="text-xs font-bold text-indigo-600 hover:underline dark:text-indigo-400">
+              Upgrade
+            </button>
+          )}
+        </div>
       </div>
     </aside>
   );

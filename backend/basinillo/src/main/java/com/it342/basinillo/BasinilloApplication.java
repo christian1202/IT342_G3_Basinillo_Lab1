@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class BasinilloApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(BasinilloApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(BasinilloApplication.class, args);
+    }
 }

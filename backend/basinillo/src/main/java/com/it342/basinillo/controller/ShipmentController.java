@@ -1,115 +1,99 @@
 package com.it342.basinillo.controller;
 
-import com.it342.basinillo.entity.Shipment;
+import com.it342.basinillo.dto.*;
+import com.it342.basinillo.entity.User;
+import com.it342.basinillo.enums.ShipmentLane;
+import com.it342.basinillo.enums.ShipmentStatus;
+import com.it342.basinillo.service.ShipmentAnalysisService;
 import com.it342.basinillo.service.ShipmentService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
-/**
- * REST Controller for Shipment management endpoints.
- * Base path: /api/shipments
- *
- * Thin controller — delegates all business logic to ShipmentService.
- * Only responsible for HTTP concerns: parsing requests, returning responses.
- */
 @RestController
-@RequestMapping("/api/shipments")
+@RequestMapping("/api/v1/shipments")
+@RequiredArgsConstructor
 public class ShipmentController {
 
     private final ShipmentService shipmentService;
+    private final ShipmentAnalysisService analysisService;
 
-    /**
-     * Constructor Injection — Spring auto-injects the ShipmentService bean.
-     */
-    public ShipmentController(ShipmentService shipmentService) {
-        this.shipmentService = shipmentService;
-    }
+    // ── CRUD ─────────────────────────────────────────────────
 
-    /* ================================================================== */
-    /*  POST /api/shipments — Create a new shipment                        */
-    /* ================================================================== */
-
-    /**
-     * Creates a new shipment.
-     *
-     * Expects a JSON body with the following fields:
-     * {
-     *   "userId":          "uuid-string",
-     *   "blNumber":        "BL-2026-001",
-     *   "vesselName":      "MV Ever Given",
-     *   "containerNumber": "MSKU1234567",
-     *   "arrivalDate":     "2026-03-15T08:00:00"
-     * }
-     *
-     * @param payload the request body as a map
-     * @return 201 Created with the persisted Shipment, or 400 Bad Request on validation failure
-     */
     @PostMapping
-    public ResponseEntity<?> createShipment(@RequestBody Map<String, String> payload) {
-
-        try {
-            UUID userId             = UUID.fromString(payload.get("userId"));
-            String blNumber         = payload.get("blNumber");
-            String vesselName       = payload.get("vesselName");
-            String containerNumber  = payload.get("containerNumber");
-            LocalDateTime arrivalDate = payload.containsKey("arrivalDate")
-                    ? LocalDateTime.parse(payload.get("arrivalDate"))
-                    : null;
-
-            Shipment created = shipmentService.createShipment(
-                    userId, blNumber, vesselName, containerNumber, arrivalDate);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<ShipmentResponse>> create(
+            @Valid @RequestBody CreateShipmentRequest request,
+            @AuthenticationPrincipal User user) {
+        ShipmentResponse data = shipmentService.createShipment(request, user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(data));
     }
 
-    /* ================================================================== */
-    /*  GET /api/shipments?userId={uuid} — List shipments for a user       */
-    /* ================================================================== */
-
-    /**
-     * Returns all shipments for the specified user, newest first.
-     *
-     * @param userId the UUID of the shipment owner (query parameter)
-     * @return 200 OK with a list of Shipment entities
-     */
     @GetMapping
-    public ResponseEntity<List<Shipment>> getShipmentsByUser(
-            @RequestParam("userId") UUID userId) {
+    public ResponseEntity<ApiResponse<List<ShipmentResponse>>> getAll(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) ShipmentStatus status,
+            @RequestParam(required = false) ShipmentLane lane) {
 
-        List<Shipment> shipmentList = shipmentService.findShipmentsByUser(userId);
-        return ResponseEntity.ok(shipmentList);
+        List<ShipmentResponse> data;
+
+        if (search != null && !search.isBlank()) {
+            data = shipmentService.searchShipments(user, search);
+        } else if (status != null) {
+            data = shipmentService.filterByStatus(user, status);
+        } else if (lane != null) {
+            data = shipmentService.filterByLane(user, lane);
+        } else {
+            data = shipmentService.getAllForUser(user);
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(data));
     }
 
-    /* ================================================================== */
-    /*  GET /api/shipments/{id} — Get a single shipment                    */
-    /* ================================================================== */
-
-    /**
-     * Returns a single shipment by its database ID.
-     *
-     * @param shipmentId the UUID of the shipment
-     * @return 200 OK with the Shipment, or 404 Not Found
-     */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getShipmentById(@PathVariable("id") UUID shipmentId) {
+    public ResponseEntity<ApiResponse<ShipmentResponse>> getById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        ShipmentResponse data = shipmentService.getById(id, user);
+        return ResponseEntity.ok(ApiResponse.success(data));
+    }
 
-        try {
-            Shipment shipment = shipmentService.findShipmentById(shipmentId);
-            return ResponseEntity.ok(shipment);
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<ShipmentResponse>> update(
+            @PathVariable Long id,
+            @RequestBody UpdateShipmentRequest request,
+            @AuthenticationPrincipal User user) {
+        ShipmentResponse data = shipmentService.updateShipment(id, request, user);
+        return ResponseEntity.ok(ApiResponse.success(data));
+    }
 
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
-        }
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<ShipmentResponse>> advanceStatus(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        ShipmentResponse data = shipmentService.advanceStatus(id, user);
+        return ResponseEntity.ok(ApiResponse.success(data));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        shipmentService.softDelete(id, user);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    // ── Analysis ─────────────────────────────────────────────
+
+    @GetMapping("/analysis")
+    public ResponseEntity<ApiResponse<ShipmentAnalysisResponse>> getAnalysis(
+            @AuthenticationPrincipal User user) {
+        ShipmentAnalysisResponse data = analysisService.getAnalysisForUser(user.getId());
+        return ResponseEntity.ok(ApiResponse.success(data));
     }
 }
