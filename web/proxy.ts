@@ -1,6 +1,6 @@
 /* ================================================================== */
-/*  PORTKEY — Middleware                                               */
-/*  Edge-runtime middleware for route protection.                      */
+/*  PORTKEY — Proxy                                                    */
+/*  Edge-runtime proxy for route protection.                           */
 /* ================================================================== */
 
 import { NextResponse } from "next/server";
@@ -15,11 +15,11 @@ function matchesAny(pathname: string, routes: string[]): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // We check for the access token in cookies.
-  // Note: localStorage isn't available in Next.js middleware.
+  // Note: localStorage isn't available in Next.js proxy.
   // Supabase proxy is removed, so we'll enforce that the client
   // sets a generic 'portkey_session' cookie for simple edge routing,
   // or we'll rely on the API 401 interceptor for strict protection.
@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
   if (pathname === "/") return NextResponse.next();
 
   // The actual layout.tsx or useAuth will handle client-side kicks if no token in localStorage.
-  // Edge middleware without cookies relies on the client.
+  // Edge proxy without cookies relies on the client.
 
   return NextResponse.next();
 }

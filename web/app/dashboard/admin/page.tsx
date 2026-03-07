@@ -16,7 +16,7 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Basic client-side guard, though middleware/layout should strictly handle this in a real app
+    // Basic client-side guard, though proxy/layout should strictly handle this in a real app
     if (user && user.role !== Role.ADMIN) {
       redirect("/dashboard");
     }
